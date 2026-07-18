@@ -49,9 +49,17 @@ types/
 - **Màu trạng thái cây chỉ được định nghĩa 1 lần** trong `components/plant-status-badge`, mọi nơi khác (bảng, bản đồ, chart) phải import từ đó — không copy lại mapping màu.
 - **Không gọi `fetch` trực tiếp trong component.** Mọi API call qua `lib/api-client.ts` + custom hook trong `hooks/`, wrap bằng TanStack Query.
 - **Type API nên generate từ OpenAPI** của backend (`openapi-typescript http://localhost:8000/openapi.json -o types/api.ts`) thay vì tự gõ tay, để không lệch khi backend đổi schema.
-- **Text hướng người dùng: tiếng Việt.** Tên biến/hàm/component: tiếng Anh.
+- Text hướng người dùng (UI copy: label, button, thông báo lỗi, placeholder): **tiếng Anh**. Tên biến, hàm, bảng, endpoint: tiếng Anh (không đổi). Tài liệu nội bộ nhóm (README, CLAUDE.md, design-system.md, commit message, báo cáo GVHD): vẫn tiếng Việt như cũ — chỉ đổi ngôn ngữ hiển thị trên giao diện, không đổi ngôn ngữ làm việc của nhóm.
 - **Mỗi milestone FE kết thúc bằng:** `pnpm lint` sạch, `pnpm build` qua, ít nhất 1 test Playwright cho happy path của milestone đó (từ FE-M2 trở đi).
 - **Không tự đổi tech stack** (Mapbox/Leaflet, Recharts, shadcn...) trừ khi có lý do kỹ thuật rõ ràng và đã trao đổi với nhóm — stack đã chốt để khớp với Mobile App và báo cáo đã nộp GVHD.
+
+## Nguyên tắc UI: tối giản (minimalist)
+
+- Không dùng gradient, shadow nặng, hoặc màu trang trí ngoài bảng token đã định nghĩa trong `docs/design-system.md`.
+- Spacing theo thang cố định 4px (4/8/12/16/24/32/48/64) — không dùng giá trị lẻ tuỳ ý.
+- Tối đa 2 độ đậm font trên 1 màn hình (thường: 400 regular cho body, 600 semibold cho heading/label quan trọng).
+- Icon dùng 1 bộ duy nhất (lucide-react đã có sẵn qua shadcn), không trộn nhiều bộ icon khác nhau.
+- Ưu tiên khoảng trắng (whitespace) hơn viền/khung để phân tách nội dung.
 
 ## Môi trường (.env)
 

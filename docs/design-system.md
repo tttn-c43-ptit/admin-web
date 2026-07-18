@@ -2,6 +2,8 @@
 
 ## 1. Bối cảnh & nguyên tắc thiết kế
 
+> **Cập nhật:** toàn bộ UI copy (label, button, message) chuyển sang tiếng Anh. Giữ nguyên toàn bộ design token màu/typography đã định nghĩa bên dưới — chỉ đổi ngôn ngữ text, không đổi thiết kế.
+
 Đây là **công cụ quản lý vận hành** cho chủ vườn (B2B/nội bộ), không phải trang marketing — ưu tiên: đọc nhanh trạng thái, thao tác ít bước, rõ ràng trên bộ dữ liệu lớn (có thể 1.000+ cây). Tránh trang trí thừa; mọi lựa chọn màu/spacing phải phục vụ việc "nhìn phát biết ngay vườn đang ổn hay có vấn đề".
 
 Nguyên tắc:
