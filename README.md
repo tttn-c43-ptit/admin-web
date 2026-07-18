@@ -1,36 +1,58 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Admin Web — Hệ thống Quản lý Cây Trồng Nông Nghiệp
 
-## Getting Started
+Giao diện quản trị dành cho chủ vườn: tạo vườn, vẽ sơ đồ, quản lý cây/tag QR, giao việc, xem dashboard, quản lý kho vật tư & thu hoạch. Phần đọc-công-khai (`/trace/[code]`) dành cho người tiêu dùng quét mã truy xuất nguồn gốc.
 
-First, run the development server:
+Backend tương ứng: [`tttn-c43-ptit/backend-python`](https://github.com/tttn-c43-ptit/backend-python) — cần chạy backend trước (xem README repo đó) hoặc trỏ `NEXT_PUBLIC_API_URL` tới môi trường staging.
+
+## Tech stack
+
+Next.js (App Router) · TypeScript · Tailwind CSS + shadcn/ui · TanStack Query + `ky` · React Hook Form + Zod · Mapbox GL/Leaflet · Recharts · `qrcode`/`jsbarcode` + `react-pdf`
+
+## Quickstart (local, không Docker)
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+cp .env.example .env.local
+# đảm bảo NEXT_PUBLIC_API_URL trỏ đúng backend đang chạy (mặc định http://localhost:8000)
+
+pnpm install
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Mở http://localhost:3000
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Quickstart (Docker)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+docker compose up --build
+```
 
-## Learn More
+Mở http://localhost:3000. Yêu cầu backend đã chạy sẵn (xem repo `backend-python`) và `NEXT_PUBLIC_API_URL` trong `.env` trỏ đúng — nếu backend cũng chạy bằng Docker trên máy khác, dùng địa chỉ mạng nội bộ thay vì `localhost`.
 
-To learn more about Next.js, take a look at the following resources:
+## Cấu trúc tài liệu dự án
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- [`docs/design-system.md`](docs/design-system.md) — design tokens, danh sách màn hình theo milestone, quy trình thiết kế UI/UX
+- [`docs/prompts.md`](docs/prompts.md) — playbook prompt cho Claude Code, mỗi milestone FE-M0 → FE-M7
+- [`CLAUDE.md`](CLAUDE.md) — quy ước code cho dự án này
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Tiến độ
 
-## Deploy on Vercel
+| Milestone | Nội dung | Trạng thái |
+| --- | --- | --- |
+| FE-M0 | Auth & App Shell | 🔲 |
+| FE-M1 | Gardens & Zones (vẽ bản đồ) | 🔲 |
+| FE-M2 | Plants & Tags (sơ đồ vườn, in QR) | 🔲 |
+| FE-M3 | Plant Logs & Timeline | 🔲 |
+| FE-M4 | Tasks & Schedules | 🔲 |
+| FE-M5 | Dashboard | 🔲 |
+| FE-M6 | Inventory, Harvests & Public Trace | 🔲 |
+| FE-M7 | AI Diagnosis (view) | 🔲 |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Scripts
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+pnpm dev       # dev server, hot reload
+pnpm build     # production build
+pnpm lint      # ESLint
+pnpm test      # Vitest (unit)
+pnpm test:e2e  # Playwright (từ FE-M2 trở đi)
+```

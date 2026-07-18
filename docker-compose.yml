@@ -1,0 +1,25 @@
+services:
+  admin-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+        NEXT_PUBLIC_MAPBOX_TOKEN: ${NEXT_PUBLIC_MAPBOX_TOKEN:-}
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+      NEXT_PUBLIC_MAPBOX_TOKEN: ${NEXT_PUBLIC_MAPBOX_TOKEN:-}
+    restart: unless-stopped
+
+# Ghi chú:
+# - File này CHỈ chạy Admin Web. Backend (Postgres/PostGIS, Redis, MinIO, API)
+#   chạy riêng ở repo `backend-python` (xem docker-compose.yml của repo đó).
+# - Nếu backend cũng chạy bằng Docker trên cùng máy: đổi NEXT_PUBLIC_API_URL
+#   thành địa chỉ container backend trong cùng network, hoặc dùng
+#   `host.docker.internal` (Docker Desktop) thay vì `localhost` vì
+#   `localhost` trong container này KHÔNG trỏ ra máy host.
+# - Dev hàng ngày nên dùng `pnpm dev` (hot reload nhanh hơn nhiều so với
+#   rebuild Docker image); dùng compose này khi cần test bản build production
+#   hoặc chạy chung với backend qua Docker cho môi trường giống staging.
