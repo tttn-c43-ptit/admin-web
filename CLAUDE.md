@@ -75,3 +75,10 @@ NEXT_PUBLIC_MAPBOX_TOKEN=            # nếu dùng Mapbox thay vì Leaflet
 - [ ] Responsive kiểm tra ở breakpoint tablet (768px) — Admin Web ưu tiên desktop/tablet, không bắt buộc pixel-perfect mobile
 - [ ] Trạng thái loading/error/empty đều có xử lý (không để trắng trang khi API lỗi)
 - [ ] Screenshot màn hình chính đính kèm khi báo cáo tiến độ nhóm
+
+## Phân quyền hiển thị theo role
+
+- OWNER: thấy đầy đủ mọi mục sidebar (Vườn, Cây trồng, Công việc, Kho vật tư, Thu hoạch, Báo cáo) + màn hình quản lý nhân viên.
+- STAFF: chỉ thấy "Công việc" (Tasks) trong sidebar theo mặc định — các mục khác ẩn hoàn toàn, không hiển thị dạng disable/khoá (tránh rối UI cho nhân viên không cần dùng).
+- Role lấy từ JWT payload (decode phía client để hiển thị UI đúng ngay lập tức — nhưng KHÔNG được coi decode phía client là lớp bảo mật thật; mọi endpoint nhạy cảm vẫn phải được backend tự kiểm tra role, FE chỉ ẩn UI cho gọn trải nghiệm).
+- proxy.ts: ngoài check có token hay không, thêm check nếu route thuộc nhóm OWNER-only (ví dụ /gardens, /inventory) mà role là STAFF → redirect về /tasks thay vì cho qua.  

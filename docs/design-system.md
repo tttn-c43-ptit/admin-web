@@ -51,7 +51,8 @@ Nguyên tắc:
 
 | Milestone (FE) | Milestone backend tương ứng | Màn hình |
 | --- | --- | --- |
-| **FE-M0** Auth & Shell | M0 | Đăng nhập, đăng ký, layout sidebar/topbar rỗng, route bảo vệ theo role OWNER/STAFF |
+| **FE-M0** Auth & Shell | M0 | Đăng nhập, layout sidebar/topbar rỗng, route bảo vệ (đã đăng nhập/chưa đăng nhập) |
+| **FE-M0.5** Register, Staff & Roles | M0 | Đăng ký public (chỉ role OWNER), màn hình OWNER tạo/mời tài khoản STAFF, route guard + sidebar theo role (STAFF chỉ thấy menu Công việc, ẩn Vườn/Kho vật tư/Báo cáo hoặc hiển thị read-only) |
 | **FE-M1** Gardens & Zones | M1 | Danh sách vườn, tạo vườn (form), trang chi tiết vườn: vẽ polygon trên bản đồ (Mapbox GL/Leaflet), chia zone, danh sách zone + gán nhân viên |
 | **FE-M2** Plants & Tags | M2 | Sơ đồ vườn dạng lưới (signature element), danh sách cây (bảng + filter theo status/zone), trang chi tiết cây, in mã QR/Barcode hàng loạt (PDF) |
 | **FE-M3** Plant Logs & Timeline | M3 | Timeline báo cáo theo cây (ảnh + ghi chú theo thời gian), so sánh ảnh giữa 2 mốc thời gian |

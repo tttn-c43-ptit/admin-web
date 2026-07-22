@@ -12,23 +12,38 @@ import {
   Search,
   Bell,
   User,
+  Users,
   LogOut,
-  Menu
+  Menu,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { clearTokens } from "@/lib/auth";
+import { getUserRole, type UserRole } from "@/lib/jwt";
 import { useRouter } from "next/navigation";
 
-const NAV_ITEMS = [
-  { href: "/dashboard", label: "Overview", icon: BarChart3 },
-  { href: "/gardens", label: "Gardens", icon: Leaf },
-  { href: "/plants", label: "Plants", icon: Sprout },
+interface NavItem {
+  href: string;
+  label: string;
+  icon: typeof BarChart3;
+  ownerOnly?: boolean;
+}
+
+const NAV_ITEMS: NavItem[] = [
+  { href: "/dashboard", label: "Overview", icon: BarChart3, ownerOnly: true },
+  { href: "/gardens", label: "Gardens", icon: Leaf, ownerOnly: true },
+  { href: "/plants", label: "Plants", icon: Sprout, ownerOnly: true },
   { href: "/tasks", label: "Tasks", icon: ClipboardList },
-  { href: "/inventory", label: "Inventory", icon: Warehouse },
-  { href: "/harvests", label: "Harvests", icon: Tractor },
-  { href: "/reports", label: "Reports", icon: BarChart3 },
+  { href: "/inventory", label: "Inventory", icon: Warehouse, ownerOnly: true },
+  { href: "/harvests", label: "Harvests", icon: Tractor, ownerOnly: true },
+  { href: "/reports", label: "Reports", icon: BarChart3, ownerOnly: true },
+  { href: "/staff", label: "Staff", icon: Users, ownerOnly: true },
 ];
+
+function useRole(): UserRole | null {
+  // Safe to call in client component — getUserRole checks typeof window
+  return useMemo(() => getUserRole(), []);
+}
 
 export default function DashboardLayout({
   children,
@@ -38,25 +53,38 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const router = useRouter();
   const [isSidebarOpen, setSidebarOpen] = useState(false);
+  const role = useRole();
 
   const handleLogout = () => {
     clearTokens();
     router.push("/login");
   };
 
+  // Filter nav items based on role
+  const visibleItems = NAV_ITEMS.filter(
+    (item) => !item.ownerOnly || role === "OWNER",
+  );
+
   return (
     <div className="flex h-screen w-full bg-surface overflow-hidden">
-      {/* Sidebar - Desktop */}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-64 transform bg-sidebar border-r border-border transition-transform duration-200 ease-in-out md:relative md:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      {/* Sidebar */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-64 transform bg-sidebar border-r border-border transition-transform duration-200 ease-in-out md:relative md:translate-x-0 ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
+      >
         <div className="flex h-16 items-center border-b border-border px-6">
-          <Link href="/dashboard" className="flex items-center gap-2 text-primary font-semibold text-xl">
+          <Link
+            href={role === "STAFF" ? "/tasks" : "/dashboard"}
+            className="flex items-center gap-2 text-primary font-semibold text-xl"
+          >
             <Leaf className="h-6 w-6" />
             <span>Admin Web</span>
           </Link>
         </div>
         <nav className="flex flex-col gap-1 p-4">
-          {NAV_ITEMS.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          {visibleItems.map((item) => {
+            const isActive =
+              pathname === item.href ||
+              pathname.startsWith(`${item.href}/`);
             const Icon = item.icon;
             return (
               <Link
@@ -82,7 +110,7 @@ export default function DashboardLayout({
         {/* Topbar */}
         <header className="flex h-16 items-center justify-between border-b border-border bg-surface-card px-4 md:px-6">
           <div className="flex items-center gap-4">
-              <Button
+            <Button
               variant="ghost"
               size="icon"
               className="md:hidden"
@@ -99,7 +127,7 @@ export default function DashboardLayout({
               />
             </div>
           </div>
-          
+
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon">
               <Bell className="h-6 w-6 text-muted-foreground" />
@@ -107,21 +135,24 @@ export default function DashboardLayout({
             <Button variant="ghost" size="icon">
               <User className="h-6 w-6 text-muted-foreground" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={handleLogout} title="Logout">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleLogout}
+              title="Logout"
+            >
               <LogOut className="h-6 w-6 text-muted-foreground" />
             </Button>
           </div>
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-auto p-4 md:p-6">
-          {children}
-        </main>
+        <main className="flex-1 overflow-auto p-4 md:p-6">{children}</main>
       </div>
 
       {/* Mobile overlay */}
       {isSidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 z-40 bg-black/50 md:hidden"
           onClick={() => setSidebarOpen(false)}
         />
