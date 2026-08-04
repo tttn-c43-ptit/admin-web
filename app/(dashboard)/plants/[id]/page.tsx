@@ -12,12 +12,13 @@ import { Button } from "@/components/ui/button";
 import { TagManagerDialog } from "@/components/plants/tag-manager";
 import { PlantLogFormDialog } from "@/components/plants/plant-log-form-dialog";
 import { ImageComparisonDialog } from "@/components/plants/image-comparison-dialog";
+import { AIDiagnosisDialog } from "@/components/plants/ai-diagnosis-dialog";
 import { formatDate } from "@/lib/utils";
 // @ts-ignore
 import QRCode from "qrcode";
 // @ts-ignore
 import JsBarcode from "jsbarcode";
-import { ArrowLeft, Edit2, History, QrCode, Plus, Images } from "lucide-react";
+import { ArrowLeft, Edit2, History, QrCode, Plus, Images, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
 
@@ -33,6 +34,10 @@ export default function PlantDetailPage() {
   const [isLogFormOpen, setIsLogFormOpen] = useState(false);
   const [isCompareOpen, setIsCompareOpen] = useState(false);
   const [tagImage, setTagImage] = useState<string>("");
+
+  const [aiDialogOpen, setAiDialogOpen] = useState(false);
+  const [aiTargetLog, setAiTargetLog] = useState<string>("");
+  const [aiTargetImage, setAiTargetImage] = useState<string>("");
 
   const { data: plant, isLoading: isPlantLoading, refetch: refetchPlant } = useQuery<PlantDetail>({
     queryKey: ["plant", plantId],
@@ -175,9 +180,26 @@ export default function PlantDetailPage() {
                     </div>
                     {entry.log.note && <p className="text-sm text-muted-foreground">{entry.log.note}</p>}
                     {entry.log.images && entry.log.images.length > 0 && (
-                      <div className="flex gap-2 mt-2">
+                      <div className="flex flex-wrap gap-2 mt-2">
                         {entry.log.images.map((img, i) => (
-                          <img key={i} src={img} alt="Log" className="h-16 w-16 rounded-md object-cover border" />
+                          <div key={i} className="group relative">
+                            <img src={img} alt="Log" className="h-24 w-24 rounded-md object-cover border" />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-md flex items-center justify-center backdrop-blur-[1px]">
+                              <Button 
+                                size="sm" 
+                                variant="secondary" 
+                                className="h-7 text-xs bg-white/90 hover:bg-white text-indigo-700"
+                                onClick={() => {
+                                  setAiTargetLog(entry.log.id);
+                                  setAiTargetImage(img);
+                                  setAiDialogOpen(true);
+                                }}
+                              >
+                                <Sparkles className="mr-1 h-3 w-3" />
+                                AI
+                              </Button>
+                            </div>
+                          </div>
                         ))}
                       </div>
                     )}
@@ -219,6 +241,13 @@ export default function PlantDetailPage() {
           timeline={logsData.items}
         />
       )}
+
+      <AIDiagnosisDialog 
+        open={aiDialogOpen}
+        onOpenChange={setAiDialogOpen}
+        plantLogId={aiTargetLog}
+        imageUrl={aiTargetImage}
+      />
 
       <TagManagerDialog
         open={isTagManagerOpen}

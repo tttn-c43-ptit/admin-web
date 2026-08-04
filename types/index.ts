@@ -113,14 +113,7 @@ export interface PresignResult {
   max_size_bytes: number;
 }
 
-export interface AiDiagnosisOut {
-  id: string;
-  plant_log_id: string;
-  disease_name: string;
-  confidence: number;
-  treatment_recommendation: string | null;
-  created_at: string;
-}
+
 
 export interface TimelineEntry {
   log: PlantLog;
@@ -364,5 +357,20 @@ export interface PublicTrace {
   care_reports: number;
   last_care_at: string | null;
   public_info: Record<string, any>;
+}
+
+export interface AiDiagnosisOut {
+  id: string;
+  disease: string | null;
+  confidence: number | null;
+  suggestion: string | null;
+  model_name: string | null;
+  created_at: string;
+}
+
+export interface DiagnoseResponse {
+  plant_log_id: string;
+  diagnosis: AiDiagnosisOut;
+  disclaimer: string;
 }
 
