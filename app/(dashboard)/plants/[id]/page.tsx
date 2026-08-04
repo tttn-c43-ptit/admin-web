@@ -1,0 +1,190 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { useParams } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
+import { apiClient as api } from "@/lib/api-client";
+import { queryKeys } from "@/lib/query-keys";
+import { Plant, Tag, PlantLog, PaginatedResponse } from "@/types";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PlantStatusBadge } from "@/components/plant-status-badge";
+import { Button } from "@/components/ui/button";
+import { TagManagerDialog } from "@/components/plants/tag-manager";
+import { formatDate } from "@/lib/utils";
+// @ts-ignore
+import QRCode from "qrcode";
+// @ts-ignore
+import JsBarcode from "jsbarcode";
+import { ArrowLeft, Edit2, History, QrCode } from "lucide-react";
+import Link from "next/link";
+import { Separator } from "@/components/ui/separator";
+
+interface PlantDetail extends Plant {
+  current_tag?: Tag | null;
+}
+
+export default function PlantDetailPage() {
+  const params = useParams();
+  const plantId = params.id as string;
+
+  const [isTagManagerOpen, setIsTagManagerOpen] = useState(false);
+  const [tagImage, setTagImage] = useState<string>("");
+
+  const { data: plant, isLoading: isPlantLoading, refetch: refetchPlant } = useQuery<PlantDetail>({
+    queryKey: ["plant", plantId],
+    queryFn: () => api.get(`api/plants/${plantId}`).json(),
+  });
+
+  const { data: logsData, isLoading: isLogsLoading } = useQuery<PaginatedResponse<PlantLog>>({
+    queryKey: ["plant_logs", plantId],
+    queryFn: () => api.get(`api/plants/${plantId}/logs?limit=50&offset=0`).json(),
+  });
+
+  useEffect(() => {
+    if (plant?.current_tag) {
+      const tag = plant.current_tag;
+      if (tag.tag_type === "QR") {
+        QRCode.toDataURL(tag.tag_code, { width: 150, margin: 1 }).then(setTagImage);
+      } else {
+        const canvas = document.createElement("canvas");
+        JsBarcode(canvas, tag.tag_code, { format: "CODE128", width: 2, height: 50, displayValue: true });
+        setTagImage(canvas.toDataURL("image/png"));
+      }
+    } else {
+      setTagImage("");
+    }
+  }, [plant?.current_tag]);
+
+  if (isPlantLoading) {
+    return <div className="p-8 text-center">Loading plant details...</div>;
+  }
+
+  if (!plant) {
+    return <div className="p-8 text-center text-red-500">Plant not found.</div>;
+  }
+
+  return (
+    <div className="space-y-6 max-w-5xl mx-auto">
+      <div className="flex items-center gap-4">
+        <Link href="/plants">
+          <Button variant="ghost" size="icon">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        </Link>
+        <h1 className="text-2xl font-semibold tracking-tight">Plant {plant.code}</h1>
+        <PlantStatusBadge status={plant.status} className="ml-2" />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="col-span-1 md:col-span-2">
+          <CardHeader>
+            <CardTitle>Details</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <div className="text-sm font-medium text-muted-foreground">Garden ID</div>
+                <div className="mt-1">{plant.garden_id}</div>
+              </div>
+              <div>
+                <div className="text-sm font-medium text-muted-foreground">Zone ID</div>
+                <div className="mt-1">{plant.zone_id || "Unassigned"}</div>
+              </div>
+              <div>
+                <div className="text-sm font-medium text-muted-foreground">Grid Position</div>
+                <div className="mt-1">
+                  {plant.grid_x !== null ? `${plant.grid_x}, ${plant.grid_y}` : "N/A"}
+                </div>
+              </div>
+              <div>
+                <div className="text-sm font-medium text-muted-foreground">Planted At</div>
+                <div className="mt-1">{plant.planted_at ? formatDate(plant.planted_at) : "N/A"}</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="col-span-1">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-base font-medium">Tag Information</CardTitle>
+            <QrCode className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent className="flex flex-col items-center text-center">
+            {tagImage ? (
+              <>
+                <img src={tagImage} alt="Plant Tag" className="mb-4 max-w-[150px]" />
+                <div className="text-sm font-medium mb-1">{plant.current_tag?.tag_code}</div>
+                <div className="text-xs text-muted-foreground mb-4">
+                  {plant.current_tag?.tag_type} • {plant.current_tag?.status}
+                </div>
+                <Button variant="outline" size="sm" onClick={() => setIsTagManagerOpen(true)}>
+                  <Edit2 className="mr-2 h-3 w-3" />
+                  Replace Tag
+                </Button>
+              </>
+            ) : (
+              <div className="py-8 flex flex-col items-center">
+                <div className="text-muted-foreground text-sm mb-4">No active tag</div>
+                <Button size="sm" onClick={() => setIsTagManagerOpen(true)}>
+                  Attach Tag
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <History className="mr-2 h-5 w-5" />
+            Care History & Logs
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLogsLoading ? (
+            <div className="text-center py-4 text-muted-foreground">Loading logs...</div>
+          ) : logsData?.items && logsData.items.length > 0 ? (
+            <div className="space-y-6">
+              {logsData.items.map((log, idx) => (
+                <div key={log.id} className="relative pl-6 pb-6">
+                  {idx !== logsData.items.length - 1 && (
+                    <div className="absolute left-[11px] top-6 bottom-0 w-px bg-border"></div>
+                  )}
+                  <div className="absolute left-0 top-1.5 h-6 w-6 rounded-full border-4 border-background bg-primary"></div>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold">{formatDate(log.created_at)}</span>
+                      <PlantStatusBadge status={log.status} />
+                    </div>
+                    {log.note && <p className="text-sm text-muted-foreground">{log.note}</p>}
+                    {log.images && log.images.length > 0 && (
+                      <div className="flex gap-2 mt-2">
+                        {log.images.map((img, i) => (
+                          <img key={i} src={img} alt="Log" className="h-16 w-16 rounded-md object-cover border" />
+                        ))}
+                      </div>
+                    )}
+                    <div className="text-xs text-muted-foreground pt-1">Reporter: {log.reporter_id}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              No care history recorded yet.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <TagManagerDialog
+        open={isTagManagerOpen}
+        onOpenChange={setIsTagManagerOpen}
+        plant={plant}
+        currentTag={plant.current_tag}
+        onSuccess={refetchPlant}
+      />
+    </div>
+  );
+}

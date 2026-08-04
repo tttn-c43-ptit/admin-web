@@ -5,9 +5,10 @@ import L from "leaflet";
 import "@geoman-io/leaflet-geoman-free";
 import "leaflet/dist/leaflet.css";
 import "@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css";
-import { GardenBoundary } from "@/types";
+import { GardenBoundary, Plant } from "@/types";
 import { Button } from "./ui/button";
 import { Save } from "lucide-react";
+import { PLANT_STATUS_COLORS } from "./plant-status-badge";
 
 // Fix missing marker icons in Next.js/Leaflet
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -21,14 +22,17 @@ L.Icon.Default.mergeOptions({
 
 interface GardenMapProps {
   initialBoundary: GardenBoundary | null;
-  onSave: (boundary: GardenBoundary) => void;
+  onSave?: (boundary: GardenBoundary) => void;
   isSaving?: boolean;
+  plants?: Plant[];
+  readOnly?: boolean;
 }
 
-export default function GardenMap({ initialBoundary, onSave, isSaving }: GardenMapProps) {
+export default function GardenMap({ initialBoundary, onSave, isSaving, plants, readOnly = false }: GardenMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const leafletMap = useRef<L.Map | null>(null);
   const drawnItems = useRef<L.FeatureGroup | null>(null);
+  const plantsGroup = useRef<L.FeatureGroup | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   useEffect(() => {
@@ -43,24 +47,50 @@ export default function GardenMap({ initialBoundary, onSave, isSaving }: GardenM
       attribution: '© OpenStreetMap',
     }).addTo(map);
 
-    // Add Geoman controls
-    map.pm.addControls({
-      position: "topleft",
-      drawMarker: false,
-      drawCircleMarker: false,
-      drawPolyline: false,
-      drawRectangle: false,
-      drawCircle: false,
-      drawText: false,
-      editControls: true,
-      drawPolygon: true,
-      cutPolygon: false,
-    });
+    if (!readOnly) {
+      // Add Geoman controls
+      map.pm.addControls({
+        position: "topleft",
+        drawMarker: false,
+        drawCircleMarker: false,
+        drawPolyline: false,
+        drawRectangle: false,
+        drawCircle: false,
+        drawText: false,
+        editControls: true,
+        drawPolygon: true,
+        cutPolygon: false,
+      });
+    }
 
     const featureGroup = L.featureGroup().addTo(map);
     drawnItems.current = featureGroup;
 
-    // Handle initial boundary
+    const pGroup = L.featureGroup().addTo(map);
+    plantsGroup.current = pGroup;
+
+    leafletMap.current = map;
+
+    return () => {
+      map.remove();
+      leafletMap.current = null;
+    };
+  }, [readOnly]);
+
+  // Handle boundary and plants when they change
+  useEffect(() => {
+    const map = leafletMap.current;
+    if (!map) return;
+
+    if (drawnItems.current) {
+      drawnItems.current.clearLayers();
+    }
+    if (plantsGroup.current) {
+      plantsGroup.current.clearLayers();
+    }
+
+    let polygon: L.Polygon | null = null;
+
     if (initialBoundary && initialBoundary.coordinates && initialBoundary.coordinates.length > 0) {
       try {
         // GeoJSON coordinates are [lng, lat], Leaflet wants [lat, lng]
@@ -69,45 +99,80 @@ export default function GardenMap({ initialBoundary, onSave, isSaving }: GardenM
           coord[0],
         ] as [number, number]);
         
-        const polygon = L.polygon(latLngs);
-        featureGroup.addLayer(polygon);
+        polygon = L.polygon(latLngs);
+        if (drawnItems.current) {
+          drawnItems.current.addLayer(polygon);
+        }
         map.fitBounds(polygon.getBounds());
       } catch (e) {
         console.error("Failed to parse initial boundary", e);
       }
     }
 
-    // Geoman event listeners
-    map.on("pm:create", (e) => {
-      // Only allow 1 polygon
-      featureGroup.clearLayers();
-      featureGroup.addLayer(e.layer);
-      setHasUnsavedChanges(true);
+    // Render Plants relative to boundary if available
+    if (plants && plants.length > 0 && plantsGroup.current && polygon) {
+      const bounds = polygon.getBounds();
+      const nw = bounds.getNorthWest();
       
-      e.layer.on('pm:edit', () => {
-         setHasUnsavedChanges(true);
+      plants.forEach(plant => {
+        // Grid spacing factor (~5 meters per unit)
+        const latOffset = (plant.grid_y || 0) * 0.00005;
+        const lngOffset = (plant.grid_x || 0) * 0.00005;
+        
+        const pLat = nw.lat - latOffset;
+        const pLng = nw.lng + lngOffset;
+        
+        const color = PLANT_STATUS_COLORS[plant.status]?.hex || PLANT_STATUS_COLORS.UNKNOWN.hex;
+        
+        const marker = L.circleMarker([pLat, pLng], {
+          radius: 8,
+          fillColor: color,
+          color: "#fff",
+          weight: 2,
+          fillOpacity: 1
+        });
+
+        const popupHtml = `
+          <div class="p-1 min-w-[150px] font-sans">
+            <div class="font-bold text-sm mb-1">${plant.code}</div>
+            <div class="text-xs mb-1 font-medium">Status: ${plant.status}</div>
+            <div class="text-xs text-gray-500 mb-2">Planted: ${plant.planted_at || 'Unknown'}</div>
+            <a href="/plants/${plant.id}" class="text-xs text-blue-600 hover:underline">View Details →</a>
+          </div>
+        `;
+        
+        marker.bindPopup(popupHtml);
+        plantsGroup.current?.addLayer(marker);
       });
-    });
+    }
 
-    map.on('pm:remove', () => {
-      setHasUnsavedChanges(true);
-    });
+    // Geoman event listeners (only if not readonly)
+    if (!readOnly) {
+      map.on("pm:create", (e) => {
+        // Only allow 1 polygon
+        if (drawnItems.current) {
+          drawnItems.current.clearLayers();
+          drawnItems.current.addLayer(e.layer);
+        }
+        setHasUnsavedChanges(true);
+        
+        e.layer.on('pm:edit', () => {
+           setHasUnsavedChanges(true);
+        });
+      });
 
-    leafletMap.current = map;
+      map.on('pm:remove', () => {
+        setHasUnsavedChanges(true);
+      });
+    }
 
-    return () => {
-      map.remove();
-      leafletMap.current = null;
-    };
-  }, [initialBoundary]);
+  }, [initialBoundary, plants, readOnly]);
 
   const handleSave = () => {
-    if (!drawnItems.current) return;
+    if (!drawnItems.current || !onSave) return;
     
     const layers = drawnItems.current.getLayers();
     if (layers.length === 0) {
-      // If user deleted the boundary, we could pass null or an empty polygon
-      // For now, let's just pass empty coordinates or reject
       return;
     }
 
@@ -122,16 +187,18 @@ export default function GardenMap({ initialBoundary, onSave, isSaving }: GardenM
 
   return (
     <div className="relative flex flex-col h-[500px] w-full rounded-xl overflow-hidden border">
-      <div className="absolute top-4 right-4 z-[400]">
-        <Button
-          onClick={handleSave}
-          disabled={!hasUnsavedChanges || isSaving}
-          className="shadow-md"
-        >
-          <Save className="h-4 w-4 mr-2" />
-          {isSaving ? "Saving..." : "Save Boundary"}
-        </Button>
-      </div>
+      {!readOnly && onSave && (
+        <div className="absolute top-4 right-4 z-[400]">
+          <Button
+            onClick={handleSave}
+            disabled={!hasUnsavedChanges || isSaving}
+            className="shadow-md"
+          >
+            <Save className="h-4 w-4 mr-2" />
+            {isSaving ? "Saving..." : "Save Boundary"}
+          </Button>
+        </div>
+      )}
       <div ref={mapRef} className="h-full w-full z-0" />
     </div>
   );

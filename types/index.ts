@@ -52,3 +52,50 @@ export interface ZoneAssignment {
   user_identifier: string;
   assigned_at: string;
 }
+
+export type PlantStatus = 'UNKNOWN' | 'HEALTHY' | 'WATCHING' | 'SICK' | 'DEAD';
+
+export interface Plant {
+  id: string;
+  garden_id: string;
+  zone_id: string | null;
+  code: string;
+  grid_x: number | null;
+  grid_y: number | null;
+  status: PlantStatus;
+  planted_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type TagType = 'QR' | 'BARCODE';
+export type TagStatus = 'ACTIVE' | 'DAMAGED' | 'LOST' | 'REPLACED';
+
+export interface Tag {
+  id: string;
+  plant_id: string;
+  tag_code: string;
+  tag_type: TagType;
+  status: TagStatus;
+  replaced_by: string | null;
+  created_at: string;
+}
+
+export interface PlantLog {
+  id: string;
+  plant_id: string;
+  status: PlantStatus;
+  note: string | null;
+  images: string[];
+  reporter_id: string;
+  client_uuid: string | null;
+  client_created_at: string | null;
+  created_at: string;
+}
+
+export interface ScanResult {
+  tag: Tag;
+  plant: Plant;
+  garden: Garden;
+  recent_logs: PlantLog[];
+}

@@ -22,6 +22,8 @@ import { useState, useEffect } from "react";
 import { clearTokens, getAccessToken } from "@/lib/auth";
 import { getUserRole, type UserRole } from "@/lib/jwt";
 import { useRouter } from "next/navigation";
+import { TestScanDialog } from "@/components/dashboard/test-scan-dialog";
+import { QrCode } from "lucide-react";
 
 interface NavItem {
   href: string;
@@ -79,6 +81,7 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const router = useRouter();
   const [isSidebarOpen, setSidebarOpen] = useState(false);
+  const [isTestScanOpen, setIsTestScanOpen] = useState(false);
   const role = useRole();
 
   const handleLogout = () => {
@@ -156,11 +159,20 @@ export default function DashboardLayout({
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" className="relative">
+          <div className="flex items-center gap-2 md:gap-4">
+            <Button variant="outline" size="sm" onClick={() => setIsTestScanOpen(true)} className="hidden md:flex">
+              <QrCode className="h-4 w-4 mr-2" />
+              Test Scan
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => setIsTestScanOpen(true)} className="md:hidden">
+              <QrCode className="h-5 w-5 text-muted-foreground" />
+            </Button>
+            
+            <Button variant="ghost" size="icon" className="relative hidden md:flex">
               <Bell className="h-5 w-5 text-muted-foreground" />
               <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-destructive"></span>
             </Button>
+            
             <Avatar className="h-8 w-8 ml-2 mr-2 border shadow-sm">
               <AvatarImage src="https://github.com/shadcn.png" alt="@admin" />
               <AvatarFallback>AD</AvatarFallback>
@@ -187,6 +199,8 @@ export default function DashboardLayout({
           onClick={() => setSidebarOpen(false)}
         />
       )}
+      
+      <TestScanDialog open={isTestScanOpen} onOpenChange={setIsTestScanOpen} />
     </div>
   );
 }
