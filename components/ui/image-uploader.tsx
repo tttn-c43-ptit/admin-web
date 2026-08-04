@@ -65,9 +65,9 @@ export function ImageUploader({
           newUrls.push(presignRes.object_url);
         }
         onChange(newUrls);
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("Upload error:", error);
-        toast.error(error.message || "An error occurred during upload.");
+        toast.error(error instanceof Error ? error.message : "An error occurred during upload.");
       } finally {
         setIsUploading(false);
       }

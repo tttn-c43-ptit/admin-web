@@ -26,7 +26,7 @@ import {
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { ImageUploader } from "@/components/ui/image-uploader";
-import { PlantStatus } from "@/types";
+
 
 const formSchema = z.object({
   status: z.enum(["UNKNOWN", "HEALTHY", "WATCHING", "SICK", "DEAD"] as const),
@@ -74,8 +74,8 @@ export function PlantLogFormDialog({
       reset();
       onOpenChange(false);
       onSuccess();
-    } catch (error: any) {
-      toast.error(error.message || "Failed to add care log");
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Failed to add care log");
     } finally {
       setIsSubmitting(false);
     }

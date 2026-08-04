@@ -20,9 +20,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-// @ts-ignore
+// @ts-expect-error qrcode-missing-types
 import QRCode from "qrcode";
-// @ts-ignore
 import JsBarcode from "jsbarcode";
 import { PDFDownloadLink, Document, Page, Text, View, StyleSheet, Image as PdfImage } from "@react-pdf/renderer";
 import { Loader2 } from "lucide-react";
@@ -169,8 +168,8 @@ export function PrintTagsDialog({ open, onOpenChange, gardenId }: PrintTagsDialo
                 document={<TagDocument plants={data?.items || []} format={format} tagImages={tagImages} />}
                 fileName={`garden-${gardenId}-tags.pdf`}
               >
-                {/* @ts-ignore */}
-                {({ loading }: any) => (
+                {/* @ts-expect-error type missing react-pdf */}
+                {({ loading }: unknown) => (
                   <Button disabled={loading}>
                     {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Download PDF"}
                   </Button>

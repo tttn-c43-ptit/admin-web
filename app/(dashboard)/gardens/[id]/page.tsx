@@ -10,6 +10,7 @@ import Link from "next/link";
 import { ArrowLeft, Map as MapIcon } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { ZonesPanel } from "./zones-panel";
+import { ScheduleFormDialog } from "@/components/schedules/schedule-form-dialog";
 
 // Load GardenMap dynamically to avoid SSR issues with Leaflet
 const GardenMap = dynamic(() => import("@/components/garden-map"), {
@@ -66,16 +67,21 @@ export default function GardenDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center space-x-4">
-        <Link href="/gardens" className={buttonVariants({ variant: "ghost", size: "icon" })}>
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{garden.name}</h1>
-          <p className="text-sm text-muted-foreground">
-            {garden.address} • {garden.plant_type}
-            {garden.area_m2 && ` • ${garden.area_m2.toFixed(2)} m²`}
-          </p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <Link href="/gardens" className={buttonVariants({ variant: "ghost", size: "icon" })}>
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">{garden.name}</h1>
+            <p className="text-sm text-muted-foreground">
+              {garden.address} • {garden.plant_type}
+              {garden.area_m2 && ` • ${garden.area_m2.toFixed(2)} m²`}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center space-x-2">
+          <ScheduleFormDialog gardenId={id} />
         </div>
       </div>
 

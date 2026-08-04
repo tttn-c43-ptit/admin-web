@@ -133,3 +133,79 @@ export interface PlantLogCreate {
   images?: string[];
   client_uuid?: string;
 }
+
+export type TaskType = 'WATER' | 'FERTILIZE' | 'SPRAY' | 'INSPECT' | 'HARVEST' | 'OTHER';
+export type TaskStatus = 'PENDING' | 'IN_PROGRESS' | 'DONE' | 'CANCELLED';
+
+export interface TaskOut {
+  id: string;
+  garden_id: string;
+  plant_id: string | null;
+  assignee_id: string | null;
+  created_by: string;
+  type: TaskType;
+  description: string | null;
+  status: TaskStatus;
+  due_date: string | null;
+  completed_at: string | null;
+  proof_images: string[];
+  created_at: string;
+}
+
+export interface TaskCreate {
+  garden_id: string;
+  type: TaskType;
+  plant_id?: string | null;
+  assignee_id?: string | null;
+  description?: string | null;
+  due_date?: string | null;
+}
+
+export interface TaskUpdate {
+  type?: TaskType;
+  plant_id?: string | null;
+  assignee_id?: string | null;
+  description?: string | null;
+  due_date?: string | null;
+  status?: TaskStatus;
+}
+
+export interface TaskComplete {
+  proof_images: string[];
+}
+
+export interface ScheduleCreate {
+  type: TaskType;
+  cron_expr: string;
+  description?: string | null;
+  zone_id?: string | null;
+  is_active?: boolean;
+}
+
+export interface ScheduleOut {
+  id: string;
+  garden_id: string;
+  zone_id: string | null;
+  type: TaskType;
+  description: string | null;
+  cron_expr: string;
+  next_run_at: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface NotificationOut {
+  id: string;
+  user_id: string;
+  title: string;
+  body: string | null;
+  ref_type: string | null;
+  ref_id: string | null;
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface UnreadCount {
+  unread: number;
+}
+

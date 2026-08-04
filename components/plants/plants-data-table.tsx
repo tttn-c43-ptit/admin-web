@@ -29,7 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { MoreHorizontal, Plus, QrCode, Search, ChevronRight, Eye, ChevronLeft, Printer } from "lucide-react";
+import { Plus, ChevronRight, Eye, ChevronLeft, Printer } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import Link from "next/link";
 // Dialog components
@@ -65,7 +65,7 @@ export const columns: ColumnDef<Plant>[] = [
     id: "actions",
     header: "Actions",
     cell: ({ row }) => {
-      const plant = row.original;
+
       return (
         <div className="flex gap-2">
           <Link href={`/plants/${row.original.id}`}>

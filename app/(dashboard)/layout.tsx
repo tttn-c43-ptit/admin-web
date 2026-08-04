@@ -24,6 +24,7 @@ import { getUserRole, type UserRole } from "@/lib/jwt";
 import { useRouter } from "next/navigation";
 import { TestScanDialog } from "@/components/dashboard/test-scan-dialog";
 import { QrCode } from "lucide-react";
+import { NotificationBell } from "@/components/layout/notification-bell";
 
 interface NavItem {
   href: string;
@@ -168,10 +169,9 @@ export default function DashboardLayout({
               <QrCode className="h-5 w-5 text-muted-foreground" />
             </Button>
             
-            <Button variant="ghost" size="icon" className="relative hidden md:flex">
-              <Bell className="h-5 w-5 text-muted-foreground" />
-              <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-destructive"></span>
-            </Button>
+            <div className="hidden md:flex">
+              <NotificationBell />
+            </div>
             
             <Avatar className="h-8 w-8 ml-2 mr-2 border shadow-sm">
               <AvatarImage src="https://github.com/shadcn.png" alt="@admin" />

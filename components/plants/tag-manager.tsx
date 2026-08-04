@@ -83,8 +83,8 @@ export function TagManagerDialog({
       reset();
       onOpenChange(false);
       onSuccess();
-    } catch (error: any) {
-      toast.error(error.message || "Failed to manage tag");
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Failed to manage tag");
     } finally {
       setIsSubmitting(false);
     }
