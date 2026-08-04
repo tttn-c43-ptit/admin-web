@@ -5,7 +5,9 @@ export const REFRESH_TOKEN_KEY = 'refresh_token';
 
 export const getAccessToken = () => {
   if (typeof window !== 'undefined') {
-    return sessionStorage.getItem(ACCESS_TOKEN_KEY);
+    const sessionToken = sessionStorage.getItem(ACCESS_TOKEN_KEY);
+    if (sessionToken) return sessionToken;
+    return Cookies.get(ACCESS_TOKEN_KEY) || null;
   }
   return null;
 };

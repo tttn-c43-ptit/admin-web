@@ -130,43 +130,46 @@ Definition of done: tạo task/schedule thành công qua form thật, start/comp
 
 ## FE-M5 — Dashboard
 
-> ⚠️ **CHƯA CHẠY PROMPT NÀY** — `openapi.json` hiện chưa có endpoint dashboard aggregate hay `/api/ai/summarize`. Xác nhận lại bằng cách fetch `http://localhost:8000/openapi.json` mới trước khi chạy; nếu vẫn chưa có, backend cần làm phần này trước.
 
 ```
-Đọc CLAUDE.md và docs/design-system.md trước khi làm.
+Đọc CLAUDE.md và docs/design-system.md trước khi làm. Tham khảo thêm mục "stats" và "ai" trong docs/api-guide.md (backend) nếu cần chi tiết field trả về.
 
-1. Trang /dashboard: thẻ KPI (tổng số cây theo từng plant_status, dùng đúng màu chuẩn), biểu đồ xu hướng theo thời gian (Recharts).
-2. Thẻ tóm tắt AI: gọi POST /api/ai/summarize (nếu backend đã có ở M5), hiển thị đoạn text ngắn AI tổng hợp tình hình vườn; xử lý trạng thái đang tải AI riêng (có thể chậm hơn API thường) và trạng thái lỗi/không khả dụng rõ ràng.
+1. Trang /dashboard: gọi GET /api/gardens/{garden_id}/stats — 1 endpoint duy nhất trả về đủ: status breakdown (số cây theo từng plant_status), stale plants (cây lâu chưa báo cáo), per-zone counts, weekly trend, early-warning alerts. Dựng thẻ KPI (dùng đúng màu chuẩn theo plant_status) + biểu đồ xu hướng (Recharts) từ payload này — không tự tính lại ở FE.
 
-Definition of done: dashboard load đúng số liệu thật, biểu đồ responsive ở tablet. pnpm lint + build sạch.
+2. Thẻ tóm tắt AI: form chọn window_days (mặc định 7, cho phép 1-90), gọi POST /api/ai/summarize { garden_id, window_days }. Đây là API rate-limited và chỉ OWNER gọi được — xử lý rõ trạng thái: đang tải (có thể chậm hơn API thường), lỗi 429 (rate limit, hiện thông báo "thử lại sau"), và trường hợp thành công hiển thị đoạn text + danh sách cây được highlight.
+
+Definition of done: dashboard load đúng số liệu thật từ /stats, AI summary gọi được thật (provider mặc định là fake/deterministic nên không cần API key, vẫn ra kết quả hợp lý để demo), biểu đồ responsive ở tablet. pnpm lint + build sạch.
 ```
 
 ---
 
 ## FE-M6 — Inventory, Harvests & Public Trace
 
-> ⚠️ **CHƯA CHẠY PROMPT NÀY** — `openapi.json` hiện chưa có endpoint `/api/inventory*`, `/api/harvests*`, hay `/api/trace/*`. Xác nhận lại qua `openapi.json` mới trước khi chạy.
-
 ```
-Đọc CLAUDE.md và docs/design-system.md trước khi làm.
+Đọc CLAUDE.md và docs/design-system.md trước khi làm. Tham khảo mục "inventory", "harvests", "trace" trong docs/api-guide.md.
 
-1. Trang /inventory: bảng vật tư (inventory_items) + lịch sử nhập/xuất (inventory_transactions), cảnh báo khi quantity < min_quantity hoặc gần expiry_date.
-2. Trang /harvests: bảng thu hoạch theo mùa/cây, biểu đồ năng suất.
-3. Trang public /trace/[code] (KHÔNG nằm trong route group (dashboard), không cần đăng nhập): gọi GET /api/trace/:code, thiết kế khác hẳn — hướng người tiêu dùng cuối, có thể dùng tông màu ấm/thân thiện hơn thay vì giao diện "công cụ vận hành" của phần admin.
+1. Trang /inventory: DataTable từ GET /api/gardens/{garden_id}/inventory (filter theo type: FERTILIZER/PESTICIDE/TOOL/OTHER, phân trang). Form tạo vật tư POST cùng endpoint (name, type, unit, min_quantity, expiry_date). Sửa/xoá qua PATCH/DELETE /api/inventory/{item_id}. Ghi nhận nhập/xuất qua POST /api/inventory/{item_id}/transactions (direction IN/OUT, quantity, note) — hiển thị lịch sử qua GET /api/inventory/{item_id}/transactions.
 
-Definition of done: cảnh báo tồn kho hiển thị đúng điều kiện, trang public hoạt động độc lập không cần token. pnpm lint + build sạch.
+2. Cảnh báo tồn kho: KHÔNG tự tính điều kiện quantity < min_quantity ở FE — gọi thẳng GET /api/gardens/{garden_id}/inventory/warnings (backend đã tính sẵn low-stock + expiry), hiển thị banner/badge từ kết quả này.
+
+3. Trang /harvests: form ghi nhận thu hoạch qua POST /api/plants/{plant_id}/harvests (quantity_kg, quality, season, harvested_at), danh sách qua GET /api/plants/{plant_id}/harvests. Biểu đồ năng suất tổng hợp dùng GET /api/gardens/{garden_id}/harvest-stats (rollup theo season/zone/quality — không tự tính ở FE).
+
+4. Quản lý mã truy xuất nguồn gốc (OWNER, trong dashboard): trang tạo lô truy xuất — form chọn nhiều plant_ids, batch_name, harvest_date, public_info (object tự do: certification, variety, care notes...) → POST /api/gardens/{garden_id}/trace-codes. Danh sách/sửa/xoá qua GET/PATCH/DELETE /api/trace-codes/{trace_code_id}.
+
+5. Trang public /trace/[code] (route group riêng, KHÔNG trong (dashboard), không cần đăng nhập): gọi GET /api/trace/{code} — thiết kế khác hẳn phần admin, hướng người tiêu dùng cuối, tông màu ấm/thân thiện hơn (theo đúng mục 5 trong docs/design-system.md).
+
+Definition of done: cảnh báo tồn kho lấy đúng từ endpoint /warnings (không tự tính), harvest-stats hiển thị đúng rollup thật, mint được 1 trace code thật và trang /trace/[code] hiển thị đúng công khai không cần token. pnpm lint + build sạch.
 ```
 
 ---
 
 ## FE-M7 — AI Diagnosis (view only)
 
-> ⚠️ **CHƯA CHẠY PROMPT NÀY** — `openapi.json` hiện chưa có endpoint `/api/ai/diagnose` hay `ai_diagnoses`. Xác nhận lại qua `openapi.json` mới trước khi chạy.
 
 ```
-Đọc CLAUDE.md và docs/design-system.md trước khi làm.
+Đọc CLAUDE.md và docs/design-system.md trước khi làm. Tham khảo mục "ai" trong docs/api-guide.md và UC-26 trong docs/use-case-diagrams.md.
 
-Trên trang chi tiết cây (/plants/[id]): thêm section hiển thị kết quả ai_diagnoses gắn với từng plant_log — tên bệnh, % confidence (hiển thị rõ đây là gợi ý AI, không phải chẩn đoán chắc chắn), gợi ý xử lý (suggestion).
+Trên trang chi tiết cây (/plants/[id]), tại mỗi entry trong timeline có ảnh: thêm nút "Chẩn đoán AI" trên từng ảnh, gọi POST /api/ai/diagnose { plant_log_id, image_url } — LƯU Ý image_url phải là 1 trong các URL ảnh đã có sẵn của đúng log đó (không phải upload ảnh mới). Owner hoặc STAFF được gán vào zone đều gọi được; endpoint rate-limited nên xử lý rõ lỗi 429. Hiển thị kết quả: tên bệnh, % confidence, gợi ý xử lý — ghi rõ đây là gợi ý AI tham khảo, không phải chẩn đoán chắc chắn (provider mặc định "fake" deterministic, không cần API key để demo).
 
-Definition of done: hiển thị đúng dữ liệu thật khi backend đã có ai_diagnoses, có fallback rõ ràng khi log chưa được AI chẩn đoán. pnpm lint + build sạch.
+Definition of done: chẩn đoán được thật trên 1 ảnh có sẵn trong timeline, kết quả hiển thị gắn đúng với log đó, có fallback rõ ràng cho log chưa được chẩn đoán. pnpm lint + build sạch.
 ```

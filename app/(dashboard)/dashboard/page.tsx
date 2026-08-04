@@ -1,40 +1,30 @@
+import { HeroSection } from "@/components/dashboard/hero-section";
+import { SoilIntelligenceChart } from "@/components/dashboard/soil-intelligence-chart";
+import { ClimateIQChart } from "@/components/dashboard/climate-iq-chart";
+import { CameraFeed } from "@/components/dashboard/camera-feed";
+import { DeviceSensorsList } from "@/components/dashboard/device-sensors-list";
+import { RecentUpdatesList } from "@/components/dashboard/recent-updates-list";
+
 export default function DashboardPage() {
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-xl border bg-card text-card-foreground">
-          <div className="p-6 flex flex-row items-center justify-between space-y-0 pb-2">
-            <h3 className="tracking-tight text-sm">Total Plants</h3>
-          </div>
-          <div className="p-6 pt-0">
-            <div className="text-2xl font-semibold tabular-nums">1,234</div>
-            <p className="text-xs text-muted-foreground">+20.1% from last month</p>
-          </div>
+    <div className="space-y-6 max-w-7xl mx-auto px-1 animate-in fade-in duration-500 pb-12">
+      {/* Top Banner */}
+      <HeroSection />
+
+      {/* Middle Tier: Charts & Camera */}
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
+        <SoilIntelligenceChart />
+        <ClimateIQChart />
+        <CameraFeed />
+      </div>
+
+      {/* Bottom Tier: Lists */}
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-5">
+        <div className="lg:col-span-3">
+          <DeviceSensorsList />
         </div>
-        <div className="rounded-xl border bg-card text-card-foreground">
-          <div className="p-6 flex flex-row items-center justify-between space-y-0 pb-2">
-            <h3 className="tracking-tight text-sm">Healthy</h3>
-          </div>
-          <div className="p-6 pt-0">
-            <div className="text-2xl font-semibold tabular-nums text-[var(--status-healthy)]">980</div>
-          </div>
-        </div>
-        <div className="rounded-xl border bg-card text-card-foreground">
-          <div className="p-6 flex flex-row items-center justify-between space-y-0 pb-2">
-            <h3 className="tracking-tight text-sm">Needs Attention</h3>
-          </div>
-          <div className="p-6 pt-0">
-            <div className="text-2xl font-semibold tabular-nums text-[var(--status-watching)]">120</div>
-          </div>
-        </div>
-        <div className="rounded-xl border bg-card text-card-foreground">
-          <div className="p-6 flex flex-row items-center justify-between space-y-0 pb-2">
-            <h3 className="tracking-tight text-sm">Sick</h3>
-          </div>
-          <div className="p-6 pt-0">
-            <div className="text-2xl font-semibold tabular-nums text-[var(--status-sick)]">34</div>
-          </div>
+        <div className="lg:col-span-2">
+          <RecentUpdatesList />
         </div>
       </div>
     </div>

@@ -17,8 +17,9 @@ import {
   Menu,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState, useMemo } from "react";
-import { clearTokens } from "@/lib/auth";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useState, useEffect } from "react";
+import { clearTokens, getAccessToken } from "@/lib/auth";
 import { getUserRole, type UserRole } from "@/lib/jwt";
 import { useRouter } from "next/navigation";
 
@@ -41,8 +42,33 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 function useRole(): UserRole | null {
-  // Safe to call in client component — getUserRole checks typeof window
-  return useMemo(() => getUserRole(), []);
+  const [role, setRole] = useState<UserRole | null>(null);
+  useEffect(() => {
+    // Read from JWT first for fast path if it ever gets added
+    const jwtRole = getUserRole();
+    if (jwtRole) {
+      setRole(jwtRole);
+    }
+    
+    // Fetch from backend to be sure
+    const token = getAccessToken();
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    if (token) {
+      fetch(`${API_URL}/api/auth/me`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.role) {
+          setRole(data.role.toUpperCase());
+        }
+      })
+      .catch(err => console.error("Failed to fetch role", err));
+    }
+  }, []);
+  return role;
 }
 
 export default function DashboardLayout({
@@ -74,10 +100,12 @@ export default function DashboardLayout({
         <div className="flex h-16 items-center border-b border-border px-6">
           <Link
             href={role === "STAFF" ? "/tasks" : "/dashboard"}
-            className="flex items-center gap-2 text-primary font-semibold text-xl"
+            className="flex items-center gap-3 text-primary font-bold text-xl tracking-tight"
           >
-            <Leaf className="h-6 w-6" />
-            <span>Admin Web</span>
+            <div className="bg-white overflow-hidden rounded-lg h-8 w-8 flex items-center justify-center shadow-sm border">
+              <img src="/images/logo.png" alt="Logo" className="h-full w-full object-cover" />
+            </div>
+            <span>PlantCare</span>
           </Link>
         </div>
         <nav className="flex flex-col gap-1 p-4">
@@ -129,12 +157,14 @@ export default function DashboardLayout({
           </div>
 
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon">
-              <Bell className="h-6 w-6 text-muted-foreground" />
+            <Button variant="ghost" size="icon" className="relative">
+              <Bell className="h-5 w-5 text-muted-foreground" />
+              <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-destructive"></span>
             </Button>
-            <Button variant="ghost" size="icon">
-              <User className="h-6 w-6 text-muted-foreground" />
-            </Button>
+            <Avatar className="h-8 w-8 ml-2 mr-2 border shadow-sm">
+              <AvatarImage src="https://github.com/shadcn.png" alt="@admin" />
+              <AvatarFallback>AD</AvatarFallback>
+            </Avatar>
             <Button
               variant="ghost"
               size="icon"

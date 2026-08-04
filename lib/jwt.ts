@@ -19,13 +19,15 @@ export function decodeJwtPayload(token: string): Record<string, unknown> | null 
 
 export type UserRole = 'OWNER' | 'STAFF';
 
+import { getAccessToken } from './auth';
+
 /**
- * Read access_token from sessionStorage, decode JWT, return role.
+ * Read access_token from cookies/session, decode JWT, return role.
  * Returns null if no token or decode fails.
  */
 export function getUserRole(): UserRole | null {
   if (typeof window === 'undefined') return null;
-  const token = sessionStorage.getItem('access_token');
+  const token = getAccessToken();
   if (!token) return null;
   const payload = decodeJwtPayload(token);
   if (!payload || typeof payload.role !== 'string') return null;
