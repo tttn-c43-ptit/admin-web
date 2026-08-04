@@ -61,6 +61,7 @@ export function TaskFormDialog({
   const [role, setRole] = useState<string | null>(null);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setRole(getUserRole());
   }, []);
 

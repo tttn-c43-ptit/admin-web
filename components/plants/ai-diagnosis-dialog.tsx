@@ -44,7 +44,8 @@ export function AIDiagnosisDialog({
       });
       const data = await res.json<DiagnoseResponse>();
       setResult(data);
-    } catch (err: any) {
+    } catch (error: unknown) {
+      const err = error as { response?: { status?: number } };
       if (err?.response?.status === 429) {
         setErrorStatus(429);
         toast.error("Too many AI requests. Please try again later.");

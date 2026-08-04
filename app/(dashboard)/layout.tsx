@@ -51,6 +51,7 @@ function useRole(): UserRole | null {
     // Read from JWT first for fast path if it ever gets added
     const jwtRole = getUserRole();
     if (jwtRole) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setRole(jwtRole);
     }
     

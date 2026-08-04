@@ -333,7 +333,7 @@ export interface TraceCode {
   code: string;
   batch_name: string | null;
   harvest_date: string | null;
-  public_info: Record<string, any>;
+  public_info: Record<string, unknown>;
   plant_ids: string[];
   created_at: string;
 }
@@ -356,7 +356,7 @@ export interface PublicTrace {
   latest_harvest_at: string | null;
   care_reports: number;
   last_care_at: string | null;
-  public_info: Record<string, any>;
+  public_info: Record<string, unknown>;
 }
 
 export interface AiDiagnosisOut {

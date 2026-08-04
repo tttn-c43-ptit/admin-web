@@ -73,8 +73,9 @@ export function BulkGenerateDialog({
       reset();
       onOpenChange(false);
       onSuccess();
-    } catch (error: any) {
-      toast.error(error.message || "Failed to generate plants");
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      toast.error(err.message || "Failed to generate plants");
     } finally {
       setIsSubmitting(false);
     }

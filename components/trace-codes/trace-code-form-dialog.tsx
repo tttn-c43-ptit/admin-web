@@ -95,7 +95,8 @@ export function TraceCodeFormDialog({
       toast.success("Trace code generated successfully");
       form.reset();
       onSuccess();
-    } catch (err: any) {
+    } catch (error: unknown) {
+      const err = error as { message?: string };
       toast.error(err?.message || "Failed to generate trace code");
     } finally {
       setIsSubmitting(false);

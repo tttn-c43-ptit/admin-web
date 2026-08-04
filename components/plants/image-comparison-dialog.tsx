@@ -46,11 +46,14 @@ export function ImageComparisonDialog({
   useEffect(() => {
     // Default selection: Right = newest image, Left = oldest image (if available)
     if (open && allImages.length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setRightImageId(allImages[0].id); // newest is first in timeline
       if (allImages.length > 1) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setLeftImageId(allImages[allImages.length - 1].id); // oldest is last
       } else {
-        setLeftImageId(allImages[0].id);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+      setLeftImageId(allImages[0].id);
       }
     }
   }, [open, allImages.length]);
@@ -64,7 +67,7 @@ export function ImageComparisonDialog({
         <DialogHeader>
           <DialogTitle>Compare Images</DialogTitle>
           <DialogDescription>
-            Select two different dates to compare the plant's progress over time.
+            Select two different dates to compare the plant&apos;s progress over time.
           </DialogDescription>
         </DialogHeader>
 

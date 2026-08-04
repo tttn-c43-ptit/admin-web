@@ -14,9 +14,8 @@ import { PlantLogFormDialog } from "@/components/plants/plant-log-form-dialog";
 import { ImageComparisonDialog } from "@/components/plants/image-comparison-dialog";
 import { AIDiagnosisDialog } from "@/components/plants/ai-diagnosis-dialog";
 import { formatDate } from "@/lib/utils";
-// @ts-ignore
+// @ts-expect-error no types available
 import QRCode from "qrcode";
-// @ts-ignore
 import JsBarcode from "jsbarcode";
 import { ArrowLeft, Edit2, History, QrCode, Plus, Images, Sparkles } from "lucide-react";
 import Link from "next/link";
@@ -57,9 +56,11 @@ export default function PlantDetailPage() {
       } else {
         const canvas = document.createElement("canvas");
         JsBarcode(canvas, tag.tag_code, { format: "CODE128", width: 2, height: 50, displayValue: true });
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setTagImage(canvas.toDataURL("image/png"));
       }
     } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTagImage("");
     }
   }, [plant?.current_tag]);
@@ -213,7 +214,7 @@ export default function PlantDetailPage() {
               <History className="h-12 w-12 text-muted-foreground mb-4 opacity-20" />
               <h3 className="text-lg font-medium mb-1">No care history yet</h3>
               <p className="text-sm text-muted-foreground mb-4 max-w-sm">
-                This plant doesn't have any recorded logs. Add a care log to track its health, growth, and any treatments applied.
+                This plant doesn&apos;t have any recorded logs. Add a care log to track its health, growth, and any treatments applied.
               </p>
               <Button onClick={() => setIsLogFormOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />

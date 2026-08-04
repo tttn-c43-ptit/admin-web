@@ -37,23 +37,23 @@ export function NotificationBell() {
 
   // Fetch notifications when popover opens
   useEffect(() => {
+    async function fetchNotifications() {
+      setIsLoading(true);
+      try {
+        // Fetch recent 20 notifications
+        const data = await api.get("api/notifications?limit=20").json<PaginatedResponse<NotificationOut>>();
+        setNotifications(data.items);
+      } catch (error) {
+        console.error("Failed to fetch notifications", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
     if (isOpen) {
       fetchNotifications();
     }
-  }, [isOpen]);
-
-  const fetchNotifications = async () => {
-    setIsLoading(true);
-    try {
-      // Fetch recent 20 notifications
-      const data = await api.get("api/notifications?limit=20").json<PaginatedResponse<NotificationOut>>();
-      setNotifications(data.items);
-    } catch (error) {
-      console.error("Failed to fetch notifications", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [isOpen]);;
 
   const handleMarkAsRead = async (id: string) => {
     try {
