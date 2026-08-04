@@ -99,3 +99,37 @@ export interface ScanResult {
   garden: Garden;
   recent_logs: PlantLog[];
 }
+
+export interface PresignRequest {
+  content_type: string;
+  size_bytes: number;
+}
+
+export interface PresignResult {
+  upload_url: string;
+  object_url: string;
+  key: string;
+  expires_in_seconds: number;
+  max_size_bytes: number;
+}
+
+export interface AiDiagnosisOut {
+  id: string;
+  plant_log_id: string;
+  disease_name: string;
+  confidence: number;
+  treatment_recommendation: string | null;
+  created_at: string;
+}
+
+export interface TimelineEntry {
+  log: PlantLog;
+  reporter_name: string;
+}
+
+export interface PlantLogCreate {
+  status: PlantStatus;
+  note?: string;
+  images?: string[];
+  client_uuid?: string;
+}

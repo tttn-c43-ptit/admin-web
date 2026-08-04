@@ -5,17 +5,19 @@ import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { apiClient as api } from "@/lib/api-client";
 import { queryKeys } from "@/lib/query-keys";
-import { Plant, Tag, PlantLog, PaginatedResponse } from "@/types";
+import { Plant, Tag, TimelineEntry, PaginatedResponse } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlantStatusBadge } from "@/components/plant-status-badge";
 import { Button } from "@/components/ui/button";
 import { TagManagerDialog } from "@/components/plants/tag-manager";
+import { PlantLogFormDialog } from "@/components/plants/plant-log-form-dialog";
+import { ImageComparisonDialog } from "@/components/plants/image-comparison-dialog";
 import { formatDate } from "@/lib/utils";
 // @ts-ignore
 import QRCode from "qrcode";
 // @ts-ignore
 import JsBarcode from "jsbarcode";
-import { ArrowLeft, Edit2, History, QrCode } from "lucide-react";
+import { ArrowLeft, Edit2, History, QrCode, Plus, Images } from "lucide-react";
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
 
@@ -28,6 +30,8 @@ export default function PlantDetailPage() {
   const plantId = params.id as string;
 
   const [isTagManagerOpen, setIsTagManagerOpen] = useState(false);
+  const [isLogFormOpen, setIsLogFormOpen] = useState(false);
+  const [isCompareOpen, setIsCompareOpen] = useState(false);
   const [tagImage, setTagImage] = useState<string>("");
 
   const { data: plant, isLoading: isPlantLoading, refetch: refetchPlant } = useQuery<PlantDetail>({
@@ -35,9 +39,9 @@ export default function PlantDetailPage() {
     queryFn: () => api.get(`api/plants/${plantId}`).json(),
   });
 
-  const { data: logsData, isLoading: isLogsLoading } = useQuery<PaginatedResponse<PlantLog>>({
-    queryKey: ["plant_logs", plantId],
-    queryFn: () => api.get(`api/plants/${plantId}/logs?limit=50&offset=0`).json(),
+  const { data: logsData, isLoading: isLogsLoading, refetch: refetchTimeline } = useQuery<PaginatedResponse<TimelineEntry>>({
+    queryKey: ["plant_timeline", plantId],
+    queryFn: () => api.get(`api/plants/${plantId}/timeline?limit=50&offset=0`).json(),
   });
 
   useEffect(() => {
@@ -135,48 +139,86 @@ export default function PlantDetailPage() {
       </div>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center">
             <History className="mr-2 h-5 w-5" />
             Care History & Logs
           </CardTitle>
+          <div className="flex gap-2">
+            {logsData?.items && logsData.items.some(e => e.log.images && e.log.images.length > 0) && (
+              <Button variant="outline" size="sm" onClick={() => setIsCompareOpen(true)}>
+                <Images className="mr-2 h-4 w-4" />
+                Compare Images
+              </Button>
+            )}
+            <Button size="sm" onClick={() => setIsLogFormOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Care Log
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {isLogsLoading ? (
             <div className="text-center py-4 text-muted-foreground">Loading logs...</div>
           ) : logsData?.items && logsData.items.length > 0 ? (
             <div className="space-y-6">
-              {logsData.items.map((log, idx) => (
-                <div key={log.id} className="relative pl-6 pb-6">
+              {logsData.items.map((entry, idx) => (
+                <div key={entry.log.id} className="relative pl-6 pb-6">
                   {idx !== logsData.items.length - 1 && (
                     <div className="absolute left-[11px] top-6 bottom-0 w-px bg-border"></div>
                   )}
                   <div className="absolute left-0 top-1.5 h-6 w-6 rounded-full border-4 border-background bg-primary"></div>
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold">{formatDate(log.created_at)}</span>
-                      <PlantStatusBadge status={log.status} />
+                      <span className="text-sm font-semibold">{formatDate(entry.log.created_at)}</span>
+                      <PlantStatusBadge status={entry.log.status} />
                     </div>
-                    {log.note && <p className="text-sm text-muted-foreground">{log.note}</p>}
-                    {log.images && log.images.length > 0 && (
+                    {entry.log.note && <p className="text-sm text-muted-foreground">{entry.log.note}</p>}
+                    {entry.log.images && entry.log.images.length > 0 && (
                       <div className="flex gap-2 mt-2">
-                        {log.images.map((img, i) => (
+                        {entry.log.images.map((img, i) => (
                           <img key={i} src={img} alt="Log" className="h-16 w-16 rounded-md object-cover border" />
                         ))}
                       </div>
                     )}
-                    <div className="text-xs text-muted-foreground pt-1">Reporter: {log.reporter_id}</div>
+                    <div className="text-xs text-muted-foreground pt-1">Reporter: {entry.reporter_name}</div>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              No care history recorded yet.
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <History className="h-12 w-12 text-muted-foreground mb-4 opacity-20" />
+              <h3 className="text-lg font-medium mb-1">No care history yet</h3>
+              <p className="text-sm text-muted-foreground mb-4 max-w-sm">
+                This plant doesn't have any recorded logs. Add a care log to track its health, growth, and any treatments applied.
+              </p>
+              <Button onClick={() => setIsLogFormOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add First Log
+              </Button>
             </div>
           )}
         </CardContent>
       </Card>
+
+      <PlantLogFormDialog
+        open={isLogFormOpen}
+        onOpenChange={setIsLogFormOpen}
+        plantId={plantId}
+        onSuccess={() => {
+          refetchTimeline();
+          refetchPlant();
+        }}
+      />
+
+      {logsData?.items && (
+        <ImageComparisonDialog
+          open={isCompareOpen}
+          onOpenChange={setIsCompareOpen}
+          timeline={logsData.items}
+        />
+      )}
 
       <TagManagerDialog
         open={isTagManagerOpen}
