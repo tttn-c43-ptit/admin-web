@@ -265,3 +265,104 @@ export interface AISummaryOut {
   generated_at: string;
 }
 
+export type ItemType = 'FERTILIZER' | 'PESTICIDE' | 'TOOL' | 'OTHER';
+export type StockDirection = 'IN' | 'OUT';
+
+export interface InventoryItem {
+  id: string;
+  garden_id: string;
+  name: string;
+  type: ItemType;
+  unit: string | null;
+  quantity: number;
+  min_quantity: number;
+  expiry_date: string | null;
+  created_at: string;
+}
+
+export interface InventoryTransaction {
+  id: string;
+  item_id: string;
+  direction: StockDirection;
+  quantity: number;
+  note: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface InventoryWarnings {
+  low_stock: InventoryItem[];
+  expiring_soon: InventoryItem[];
+  expired: InventoryItem[];
+}
+
+export interface Harvest {
+  id: string;
+  plant_id: string;
+  reporter_id: string | null;
+  quantity_kg: number;
+  quality: string | null;
+  season: string | null;
+  harvested_at: string;
+  created_at: string;
+}
+
+export interface SeasonYield {
+  season: string | null;
+  quantity_kg: number;
+  records: number;
+}
+
+export interface ZoneYield {
+  zone_id: string | null;
+  zone_name: string;
+  quantity_kg: number;
+  records: number;
+}
+
+export interface QualityYield {
+  quality: string | null;
+  quantity_kg: number;
+  records: number;
+}
+
+export interface HarvestStats {
+  total_kg: number;
+  total_records: number;
+  by_season: SeasonYield[];
+  by_zone: ZoneYield[];
+  by_quality: QualityYield[];
+}
+
+export interface TraceCode {
+  id: string;
+  garden_id: string;
+  code: string;
+  batch_name: string | null;
+  harvest_date: string | null;
+  public_info: Record<string, any>;
+  plant_ids: string[];
+  created_at: string;
+}
+
+export interface PublicGarden {
+  name: string;
+  address: string | null;
+}
+
+export interface PublicTrace {
+  code: string;
+  batch_name: string | null;
+  harvest_date: string | null;
+  variety: string | null;
+  garden: PublicGarden;
+  plant_count: number;
+  planted_from: string | null;
+  planted_to: string | null;
+  total_harvested_kg: number;
+  latest_harvest_at: string | null;
+  care_reports: number;
+  last_care_at: string | null;
+  public_info: Record<string, any>;
+}
+

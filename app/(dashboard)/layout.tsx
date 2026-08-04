@@ -40,6 +40,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/tasks", label: "Tasks", icon: ClipboardList },
   { href: "/inventory", label: "Inventory", icon: Warehouse, ownerOnly: true },
   { href: "/harvests", label: "Harvests", icon: Tractor, ownerOnly: true },
+  { href: "/trace-codes", label: "Trace Codes", icon: Search, ownerOnly: true },
   { href: "/reports", label: "Reports", icon: BarChart3, ownerOnly: true },
   { href: "/staff", label: "Staff", icon: Users, ownerOnly: true },
 ];
