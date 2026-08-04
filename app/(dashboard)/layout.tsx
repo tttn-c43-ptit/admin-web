@@ -45,14 +45,21 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/staff", label: "Staff", icon: Users, ownerOnly: true },
 ];
 
-function useRole(): UserRole | null {
-  const [role, setRole] = useState<UserRole | null>(null);
+interface UserData {
+  id: string;
+  email: string;
+  full_name: string;
+  role: UserRole;
+}
+
+function useUser(): UserData | null {
+  const [user, setUser] = useState<UserData | null>(null);
   useEffect(() => {
     // Read from JWT first for fast path if it ever gets added
     const jwtRole = getUserRole();
     if (jwtRole) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setRole(jwtRole);
+      setUser({ id: "", email: "", full_name: "Loading...", role: jwtRole });
     }
     
     // Fetch from backend to be sure
@@ -67,13 +74,18 @@ function useRole(): UserRole | null {
       .then(res => res.json())
       .then(data => {
         if (data.role) {
-          setRole(data.role.toUpperCase());
+          setUser({
+            id: data.id,
+            email: data.email,
+            full_name: data.full_name,
+            role: data.role.toUpperCase() as UserRole
+          });
         }
       })
-      .catch(err => console.error("Failed to fetch role", err));
+      .catch(err => console.error("Failed to fetch user", err));
     }
   }, []);
-  return role;
+  return user;
 }
 
 export default function DashboardLayout({
@@ -85,7 +97,8 @@ export default function DashboardLayout({
   const router = useRouter();
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isTestScanOpen, setIsTestScanOpen] = useState(false);
-  const role = useRole();
+  const user = useUser();
+  const role = user?.role;
 
   const handleLogout = () => {
     clearTokens();
@@ -175,9 +188,14 @@ export default function DashboardLayout({
               <NotificationBell />
             </div>
             
-            <Avatar className="h-8 w-8 ml-2 mr-2 border shadow-sm">
-              <AvatarImage src="https://github.com/shadcn.png" alt="@admin" />
-              <AvatarFallback>AD</AvatarFallback>
+            <div className="hidden md:flex flex-col items-end ml-4 mr-2">
+              <span className="text-sm font-medium leading-none">{user?.full_name || "Admin"}</span>
+              <span className="text-xs text-muted-foreground mt-1">{user?.email || "admin@example.com"}</span>
+            </div>
+            <Avatar className="h-8 w-8 mr-2 border shadow-sm">
+              <AvatarFallback className="bg-primary/10 text-primary">
+                {user?.full_name ? user.full_name.substring(0, 2).toUpperCase() : "AD"}
+              </AvatarFallback>
             </Avatar>
             <Button
               variant="ghost"
