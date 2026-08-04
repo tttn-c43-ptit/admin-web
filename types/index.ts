@@ -209,3 +209,59 @@ export interface UnreadCount {
   unread: number;
 }
 
+export type StatusCounts = Record<PlantStatus, number>;
+
+export interface ZoneStat {
+  zone_id: string | null;
+  zone_name: string;
+  total: number;
+  by_status: StatusCounts;
+}
+
+export interface WeekPoint {
+  week_start: string;
+  reports: number;
+  sick: number;
+  watching: number;
+}
+
+export interface Alert {
+  symptom: PlantStatus;
+  plant_count: number;
+  window_days: number;
+  dominant_zone: string | null;
+}
+
+export interface GardenStats {
+  garden_id: string;
+  total_plants: number;
+  by_status: StatusCounts;
+  updated_today: number;
+  stale: number;
+  reports_last_7_days: number;
+  by_zone: ZoneStat[];
+  weekly_trend: WeekPoint[];
+  alerts: Alert[];
+}
+
+export interface AISummarizeRequest {
+  garden_id: string;
+  window_days: number;
+}
+
+export interface Highlight {
+  plant_id: string;
+  code: string;
+  status: PlantStatus;
+  reason: string;
+}
+
+export interface AISummaryOut {
+  garden_id: string;
+  summary: string;
+  highlights: Highlight[];
+  alerts: Alert[];
+  model_name: string;
+  generated_at: string;
+}
+
