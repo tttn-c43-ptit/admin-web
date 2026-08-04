@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -29,7 +29,26 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, ArrowRight } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Plus, ArrowRight, MoreHorizontal, Edit, Trash2 } from "lucide-react";
 
 const createGardenSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -44,6 +63,9 @@ export default function GardensPage() {
   const [page, setPage] = useState(0);
   const limit = 10;
   
+  const [gardenToEdit, setGardenToEdit] = useState<Garden | null>(null);
+  const [gardenToDelete, setGardenToDelete] = useState<Garden | null>(null);
+
   const queryClient = useQueryClient();
 
   // Fetch gardens
@@ -62,6 +84,20 @@ export default function GardensPage() {
     resolver: zodResolver(createGardenSchema),
   });
 
+  const editForm = useForm<CreateGardenFormValues>({
+    resolver: zodResolver(createGardenSchema),
+  });
+
+  useEffect(() => {
+    if (gardenToEdit) {
+      editForm.reset({
+        name: gardenToEdit.name,
+        address: gardenToEdit.address,
+        plant_type: gardenToEdit.plant_type,
+      });
+    }
+  }, [gardenToEdit, editForm]);
+
   const createMutation = useMutation({
     mutationFn: (newGarden: CreateGardenFormValues) =>
       api.post("api/gardens", { json: newGarden }).json<Garden>(),
@@ -72,8 +108,32 @@ export default function GardensPage() {
     },
   });
 
-  const onSubmit = (values: CreateGardenFormValues) => {
+  const updateMutation = useMutation({
+    mutationFn: (values: CreateGardenFormValues) =>
+      api.put(`api/gardens/${gardenToEdit?.id}`, { json: values }).json<Garden>(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.gardens() });
+      setGardenToEdit(null);
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`api/gardens/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.gardens() });
+      setGardenToDelete(null);
+      // Adjust pagination if needed, or rely on refetch
+    },
+  });
+
+  const onSubmitCreate = (values: CreateGardenFormValues) => {
     createMutation.mutate(values);
+  };
+
+  const onSubmitEdit = (values: CreateGardenFormValues) => {
+    updateMutation.mutate(values);
   };
 
   return (
@@ -89,7 +149,7 @@ export default function GardensPage() {
             <DialogHeader>
               <DialogTitle>Create New Garden</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={handleSubmit(onSubmitCreate)} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Name</Label>
                 <Input
@@ -184,10 +244,33 @@ export default function GardensPage() {
                       {garden.area_m2 ? garden.area_m2.toFixed(2) : "-"}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Link href={`/gardens/${garden.id}`} className={buttonVariants({ variant: "ghost", size: "sm" })}>
-                        View Details
-                        <ArrowRight className="h-4 w-4 ml-1" />
-                      </Link>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger render={<Button variant="ghost" className="h-8 w-8 p-0" />}>
+                          <span className="sr-only">Open menu</span>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuGroup>
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem render={<Link href={`/gardens/${garden.id}`} />}>
+                              <ArrowRight className="mr-2 h-4 w-4" />
+                              View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => setGardenToEdit(garden)}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Edit Garden
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => setGardenToDelete(garden)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete Garden
+                            </DropdownMenuItem>
+                          </DropdownMenuGroup>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))
@@ -220,6 +303,90 @@ export default function GardensPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Garden Dialog */}
+      <Dialog open={!!gardenToEdit} onOpenChange={(val: boolean) => !val && setGardenToEdit(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Garden</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={editForm.handleSubmit(onSubmitEdit)} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">Name</Label>
+              <Input
+                id="edit-name"
+                {...editForm.register("name")}
+                placeholder="E.g., North Farm"
+              />
+              {editForm.formState.errors.name && (
+                <p className="text-sm text-destructive">{editForm.formState.errors.name.message}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-address">Address</Label>
+              <Input
+                id="edit-address"
+                {...editForm.register("address")}
+                placeholder="123 Farm Road..."
+              />
+              {editForm.formState.errors.address && (
+                <p className="text-sm text-destructive">
+                  {editForm.formState.errors.address.message}
+                </p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-plant_type">Plant Type</Label>
+              <Input
+                id="edit-plant_type"
+                {...editForm.register("plant_type")}
+                placeholder="Tomato, Durian, etc."
+              />
+              {editForm.formState.errors.plant_type && (
+                <p className="text-sm text-destructive">
+                  {editForm.formState.errors.plant_type.message}
+                </p>
+              )}
+            </div>
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setGardenToEdit(null)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={updateMutation.isPending}>
+                {updateMutation.isPending ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Garden Alert */}
+      <AlertDialog open={!!gardenToDelete} onOpenChange={(val: boolean) => !val && setGardenToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the garden
+              <strong className="text-foreground"> {gardenToDelete?.name} </strong>
+              and all of its associated zones, plants, tasks, and data from our servers.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => gardenToDelete && deleteMutation.mutate(gardenToDelete.id)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete Garden"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

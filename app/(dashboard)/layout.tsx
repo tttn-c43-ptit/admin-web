@@ -25,6 +25,7 @@ import { useRouter } from "next/navigation";
 import { TestScanDialog } from "@/components/dashboard/test-scan-dialog";
 import { QrCode } from "lucide-react";
 import { NotificationBell } from "@/components/layout/notification-bell";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface NavItem {
   href: string;
@@ -97,11 +98,13 @@ export default function DashboardLayout({
   const router = useRouter();
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isTestScanOpen, setIsTestScanOpen] = useState(false);
+  const queryClient = useQueryClient();
   const user = useUser();
   const role = user?.role;
 
   const handleLogout = () => {
     clearTokens();
+    queryClient.clear();
     router.push("/login");
   };
 
