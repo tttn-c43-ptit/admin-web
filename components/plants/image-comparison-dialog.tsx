@@ -81,8 +81,10 @@ export function ImageComparisonDialog({
               <div className="space-y-2">
                 <Label>Before (Left)</Label>
                 <Select value={leftImageId} onValueChange={(v) => v && setLeftImageId(v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select image" />
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select image">
+                      {leftImage ? `${formatDate(leftImage.date)} - ${leftImage.status}` : "Select image"}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {allImages.map((img) => (
@@ -97,8 +99,10 @@ export function ImageComparisonDialog({
               <div className="space-y-2">
                 <Label>After (Right)</Label>
                 <Select value={rightImageId} onValueChange={(v) => v && setRightImageId(v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select image" />
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select image">
+                      {rightImage ? `${formatDate(rightImage.date)} - ${rightImage.status}` : "Select image"}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {allImages.map((img) => (

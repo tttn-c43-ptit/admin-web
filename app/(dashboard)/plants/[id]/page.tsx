@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { apiClient as api } from "@/lib/api-client";
 import { queryKeys } from "@/lib/query-keys";
-import { Plant, Tag, TimelineEntry, PaginatedResponse, Zone } from "@/types";
+import { Plant, Tag, TimelineEntry, PaginatedResponse, Zone, Garden } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlantStatusBadge } from "@/components/plant-status-badge";
 import { Button } from "@/components/ui/button";
@@ -70,10 +70,30 @@ export default function PlantDetailPage() {
     enabled: !!plant?.garden_id,
   });
 
+  const { data: garden } = useQuery<Garden>({
+    queryKey: queryKeys.gardenDetail(plant?.garden_id || ""),
+    queryFn: () => api.get(`api/gardens/${plant?.garden_id}`).json(),
+    enabled: !!plant?.garden_id,
+  });
+
   const { data: logsData, isLoading: isLogsLoading, refetch: refetchTimeline } = useQuery<PaginatedResponse<TimelineEntry>>({
     queryKey: ["plant_timeline", plantId],
     queryFn: () => api.get(`api/plants/${plantId}/timeline?limit=50&offset=0`).json(),
   });
+
+  const handleDeletePlant = async () => {
+    setIsDeleting(true);
+    try {
+      await api.delete(`api/plants/${plantId}`);
+      toast.success("Plant deleted successfully");
+      router.push("/plants");
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || "Failed to delete plant");
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteDialogOpen(false);
+    }
+  };
 
   useEffect(() => {
     if (plant?.current_tag) {
@@ -132,12 +152,16 @@ export default function PlantDetailPage() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <div className="text-sm font-medium text-muted-foreground">Garden ID</div>
-                <div className="mt-1">{plant.garden_id}</div>
+                <div className="text-sm font-medium text-muted-foreground">Garden</div>
+                <div className="mt-1">{garden ? garden.name : plant.garden_id}</div>
               </div>
               <div>
-                <div className="text-sm font-medium text-muted-foreground">Zone ID</div>
-                <div className="mt-1">{plant.zone_id || "Unassigned"}</div>
+                <div className="text-sm font-medium text-muted-foreground">Zone</div>
+                <div className="mt-1">
+                  {plant.zone_id 
+                    ? zonesData?.find(z => z.id === plant.zone_id)?.name || plant.zone_id 
+                    : "Unassigned"}
+                </div>
               </div>
               <div>
                 <div className="text-sm font-medium text-muted-foreground">Grid Position</div>
@@ -310,6 +334,41 @@ export default function PlantDetailPage() {
         currentTag={plant.current_tag}
         onSuccess={refetchPlant}
       />
+
+      {plant && (
+        <UpdatePlantDialog
+          open={isUpdatePlantOpen}
+          onOpenChange={setIsUpdatePlantOpen}
+          plant={plant}
+          onSuccess={refetchPlant}
+          zonesData={zonesData}
+        />
+      )}
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the plant
+              and all of its associated logs and data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(e) => {
+                e.preventDefault();
+                handleDeletePlant();
+              }}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Delete Plant"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
