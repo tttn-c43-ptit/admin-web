@@ -35,7 +35,9 @@ export default function PlantsPage() {
             disabled={isLoadingGardens || !gardensData?.items.length}
           >
             <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Select a garden" />
+              <SelectValue placeholder="Select a garden">
+                {gardensData?.items.find((g) => g.id === selectedGardenId)?.name}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {gardensData?.items.map((garden) => (

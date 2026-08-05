@@ -5,19 +5,32 @@ import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { apiClient as api } from "@/lib/api-client";
 import { queryKeys } from "@/lib/query-keys";
-import { Plant, Tag, TimelineEntry, PaginatedResponse } from "@/types";
+import { Plant, Tag, TimelineEntry, PaginatedResponse, Zone } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlantStatusBadge } from "@/components/plant-status-badge";
 import { Button } from "@/components/ui/button";
 import { TagManagerDialog } from "@/components/plants/tag-manager";
 import { PlantLogFormDialog } from "@/components/plants/plant-log-form-dialog";
 import { ImageComparisonDialog } from "@/components/plants/image-comparison-dialog";
+import { UpdatePlantDialog } from "@/components/plants/update-plant-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 import { AIDiagnosisDialog } from "@/components/plants/ai-diagnosis-dialog";
 import { formatDate } from "@/lib/utils";
 // @ts-expect-error no types available
 import QRCode from "qrcode";
 import JsBarcode from "jsbarcode";
-import { ArrowLeft, Edit2, History, QrCode, Plus, Images, Sparkles } from "lucide-react";
+import { ArrowLeft, Edit2, History, QrCode, Plus, Images, Sparkles, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
 
@@ -38,9 +51,21 @@ export default function PlantDetailPage() {
   const [aiTargetLog, setAiTargetLog] = useState<string>("");
   const [aiTargetImage, setAiTargetImage] = useState<string>("");
 
+  const router = useRouter();
+
+  const [isUpdatePlantOpen, setIsUpdatePlantOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const { data: plant, isLoading: isPlantLoading, refetch: refetchPlant } = useQuery<PlantDetail>({
     queryKey: ["plant", plantId],
     queryFn: () => api.get(`api/plants/${plantId}`).json(),
+  });
+
+  const { data: zonesData } = useQuery<Zone[]>({
+    queryKey: queryKeys.zones(plant?.garden_id || ""),
+    queryFn: () => api.get(`api/gardens/${plant?.garden_id}/zones`).json(),
+    enabled: !!plant?.garden_id,
   });
 
   const { data: logsData, isLoading: isLogsLoading, refetch: refetchTimeline } = useQuery<PaginatedResponse<TimelineEntry>>({
@@ -75,14 +100,26 @@ export default function PlantDetailPage() {
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
-      <div className="flex items-center gap-4">
-        <Link href="/plants">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-4 w-4" />
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Link href={`/plants`}>
+            <Button variant="ghost" size="icon">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <h1 className="text-2xl font-semibold tracking-tight">Plant {plant.code}</h1>
+          <PlantStatusBadge status={plant.status} className="ml-2" />
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setIsUpdatePlantOpen(true)}>
+            <Edit2 className="mr-2 h-4 w-4" />
+            Edit
           </Button>
-        </Link>
-        <h1 className="text-2xl font-semibold tracking-tight">Plant {plant.code}</h1>
-        <PlantStatusBadge status={plant.status} className="ml-2" />
+          <Button variant="destructive" onClick={() => setIsDeleteDialogOpen(true)}>
+            <Trash2 className="mr-2 h-4 w-4" />
+            Delete
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

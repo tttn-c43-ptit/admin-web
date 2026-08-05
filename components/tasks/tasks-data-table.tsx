@@ -8,7 +8,9 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { format } from "date-fns";
-import { MoreHorizontal, Play, CheckCircle2, XCircle, Edit } from "lucide-react";
+import { Plus, MoreHorizontal, Play, CheckCircle2, ChevronLeft, ChevronRight, Edit2, XCircle } from "lucide-react";
+import { toast } from "sonner";
+import { EditTaskDialog } from "@/components/tasks/edit-task-dialog";
 import { TaskOut, PaginatedResponse, TaskStatus } from "@/types";
 import { apiClient as api } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
@@ -43,6 +45,13 @@ export function TasksDataTable({ refreshTrigger = 0 }: TasksDataTableProps) {
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isCompleteOpen, setIsCompleteOpen] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [taskToEdit, setTaskToEdit] = useState<TaskOut | null>(null);
+
   // Pagination and Filtering State
   const [pageIndex, setPageIndex] = useState(0);
   const pageSize = 10;
@@ -50,7 +59,6 @@ export function TasksDataTable({ refreshTrigger = 0 }: TasksDataTableProps) {
 
   // Dialog states
   const [taskToComplete, setTaskToComplete] = useState<TaskOut | null>(null);
-  const [taskToEdit, setTaskToEdit] = useState<TaskOut | null>(null);
 
   const [role, setRole] = useState<string | null>(null);
 
@@ -82,18 +90,24 @@ export function TasksDataTable({ refreshTrigger = 0 }: TasksDataTableProps) {
   const handleStartTask = async (taskId: string) => {
     try {
       await api.put(`api/tasks/${taskId}/start`);
+      toast.success("Task started");
       fetchTasks();
-    } catch (error) {
-      console.error("Failed to start task", error);
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      toast.error(err.message || "Failed to start task");
     }
   };
 
   const handleCancelTask = async (taskId: string) => {
     try {
-      await api.put(`api/tasks/${taskId}`, { json: { status: "CANCELLED" } });
+      await api.put(`api/tasks/${taskId}`, {
+        json: { status: "CANCELLED" }
+      });
+      toast.success("Task cancelled");
       fetchTasks();
-    } catch (error) {
-      console.error("Failed to cancel task", error);
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      toast.error(err.message || "Failed to cancel task");
     }
   };
 
@@ -154,6 +168,8 @@ export function TasksDataTable({ refreshTrigger = 0 }: TasksDataTableProps) {
             <DropdownMenuContent align="end">
               <DropdownMenuGroup>
                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                
+                {/* Everyone (Assignee & Owner) can Start/Complete */}
                 {task.status === "PENDING" && (
                   <DropdownMenuItem onClick={() => handleStartTask(task.id)}>
                     <Play className="mr-2 h-4 w-4" />
@@ -161,21 +177,32 @@ export function TasksDataTable({ refreshTrigger = 0 }: TasksDataTableProps) {
                   </DropdownMenuItem>
                 )}
                 {task.status === "IN_PROGRESS" && (
-                  <DropdownMenuItem onClick={() => setTaskToComplete(task)}>
-                    <CheckCircle2 className="mr-2 h-4 w-4 text-green-600" />
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setSelectedTaskId(task.id);
+                      setIsCompleteOpen(true);
+                    }}
+                  >
+                    <CheckCircle2 className="mr-2 h-4 w-4" />
                     Complete Task
                   </DropdownMenuItem>
                 )}
+
+                {/* Only OWNER can Edit/Cancel */}
                 {role === "OWNER" && (
                   <>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => setTaskToEdit(task)}>
-                      <Edit className="mr-2 h-4 w-4" />
+                    <DropdownMenuItem onClick={() => {
+                      setTaskToEdit(task);
+                      setIsEditOpen(true);
+                    }}>
+                      <Edit2 className="mr-2 h-4 w-4" />
                       Edit Task
                     </DropdownMenuItem>
+                    
                     {task.status !== "CANCELLED" && task.status !== "DONE" && (
-                      <DropdownMenuItem
-                        className="text-red-600"
+                      <DropdownMenuItem 
+                        className="text-destructive focus:text-destructive"
                         onClick={() => handleCancelTask(task.id)}
                       >
                         <XCircle className="mr-2 h-4 w-4" />
@@ -312,6 +339,18 @@ export function TasksDataTable({ refreshTrigger = 0 }: TasksDataTableProps) {
           onSuccess={() => {
             setTaskToEdit(null);
             fetchTasks();
+          }}
+        />
+      )}
+
+      {taskToEdit && (
+        <EditTaskDialog
+          open={isEditOpen}
+          onOpenChange={setIsEditOpen}
+          task={taskToEdit}
+          onSuccess={() => {
+            fetchTasks();
+            setTaskToEdit(null);
           }}
         />
       )}

@@ -26,7 +26,7 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { Plus, Trash2, UserPlus, X } from "lucide-react";
+import { Plus, Trash2, UserPlus, X, Edit2 } from "lucide-react";
 
 const createZoneSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -157,8 +157,38 @@ export function ZonesPanel({ gardenId }: ZonesPanelProps) {
 
 function ZoneCard({ zone, onDelete }: { zone: Zone; onDelete: () => void }) {
   const [openAssign, setOpenAssign] = useState(false);
+  const [openEdit, setOpenEdit] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState("");
   const queryClient = useQueryClient();
+
+  const {
+    register: registerEdit,
+    handleSubmit: handleSubmitEdit,
+    reset: resetEdit,
+    formState: { errors: editErrors },
+  } = useForm<CreateZoneFormValues>({
+    resolver: zodResolver(createZoneSchema),
+    defaultValues: {
+      name: zone.name,
+      grid_position: zone.grid_position ? zone.grid_position.toString() : "",
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (updatedZone: { name: string; grid_position?: number }) =>
+      api.put(`api/zones/${zone.id}`, { json: updatedZone }).json<Zone>(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.zones(zone.garden_id) });
+      setOpenEdit(false);
+    },
+  });
+
+  const onSubmitEdit = (values: CreateZoneFormValues) => {
+    updateMutation.mutate({
+      name: values.name,
+      grid_position: values.grid_position ? parseInt(values.grid_position, 10) : undefined,
+    });
+  };
 
   const { data: assignments, isLoading: loadingAssignments } = useQuery<ZoneAssignment[]>({
     queryKey: queryKeys.zoneAssignments(zone.id),
@@ -202,14 +232,65 @@ function ZoneCard({ zone, onDelete }: { zone: Zone; onDelete: () => void }) {
             <p className="text-xs text-muted-foreground">Grid: {zone.grid_position}</p>
           )}
         </div>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="text-destructive opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 p-0"
-          onClick={onDelete}
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <Dialog open={openEdit} onOpenChange={setOpenEdit}>
+            <DialogTrigger render={<Button variant="ghost" size="sm" className="h-8 w-8 p-0" />}>
+              <Edit2 className="h-4 w-4" />
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Edit Zone</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmitEdit(onSubmitEdit)} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor={`edit-name-${zone.id}`}>Zone Name</Label>
+                  <Input
+                    id={`edit-name-${zone.id}`}
+                    {...registerEdit("name")}
+                  />
+                  {editErrors.name && (
+                    <p className="text-sm text-destructive">{editErrors.name.message}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor={`edit-grid-${zone.id}`}>Grid Position (Optional)</Label>
+                  <Input
+                    id={`edit-grid-${zone.id}`}
+                    type="number"
+                    {...registerEdit("grid_position")}
+                  />
+                </div>
+                <div className="flex justify-end space-x-2 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setOpenEdit(false);
+                      resetEdit({
+                        name: zone.name,
+                        grid_position: zone.grid_position ? zone.grid_position.toString() : "",
+                      });
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={updateMutation.isPending}>
+                    {updateMutation.isPending ? "Saving..." : "Save Changes"}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="text-destructive h-8 w-8 p-0"
+            onClick={onDelete}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       <div className="bg-secondary/30 rounded p-2 text-sm">

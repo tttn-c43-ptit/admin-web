@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { apiClient as api } from "@/lib/api-client";
@@ -26,19 +26,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Controller } from "react-hook-form";
 
 const formSchema = z.object({
-  code_prefix: z.string().min(1, "Prefix is required").max(12, "Max 12 chars"),
-  count: z.any().transform((val) => Number(val)),
-  start_index: z.any().transform((val) => val ? Number(val) : 1),
+  code: z.string().min(1, "Code is required").max(16, "Max 16 chars"),
   zone_id: z.string().optional(),
+  status: z.enum(["HEALTHY", "SICK", "DEAD", "UNKNOWN", "WATCHING"]),
   planted_at: z.string().optional(),
+  grid_x: z.any().transform((val) => val ? Number(val) : undefined).optional(),
+  grid_y: z.any().transform((val) => val ? Number(val) : undefined).optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
-interface BulkGenerateDialogProps {
+interface CreatePlantDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   gardenId: string;
@@ -46,13 +46,13 @@ interface BulkGenerateDialogProps {
   zonesData?: Zone[];
 }
 
-export function BulkGenerateDialog({
+export function CreatePlantDialog({
   open,
   onOpenChange,
   gardenId,
   onSuccess,
   zonesData,
-}: BulkGenerateDialogProps) {
+}: CreatePlantDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
@@ -64,32 +64,31 @@ export function BulkGenerateDialog({
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      code_prefix: "SR",
-      count: 10,
-      start_index: 1,
+      status: "UNKNOWN",
     },
   });
 
   async function onSubmit(values: FormValues) {
     setIsSubmitting(true);
     try {
-      await api.post(`api/gardens/${gardenId}/plants/bulk`, {
+      await api.post(`api/gardens/${gardenId}/plants`, {
         json: {
-          code_prefix: values.code_prefix,
-          count: values.count,
+          code: values.code,
           zone_id: values.zone_id || null,
+          status: values.status,
           planted_at: values.planted_at || null,
-          start_index: values.start_index,
+          grid_x: values.grid_x,
+          grid_y: values.grid_y,
         },
       }).json();
       
-      toast.success(`Successfully generated ${values.count} plants`);
+      toast.success(`Successfully created plant ${values.code}`);
       reset();
       onOpenChange(false);
       onSuccess();
     } catch (error: unknown) {
       const err = error as { message?: string };
-      toast.error(err.message || "Failed to generate plants");
+      toast.error(err.message || "Failed to create plant");
     } finally {
       setIsSubmitting(false);
     }
@@ -99,35 +98,41 @@ export function BulkGenerateDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Bulk Generate Plants</DialogTitle>
+          <DialogTitle>Create Plant</DialogTitle>
           <DialogDescription>
-            Generate multiple plants with sequential codes (e.g. SR-001, SR-002) at once.
+            Add a single new plant to the garden manually.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="code_prefix">Code Prefix</Label>
-            <Input id="code_prefix" placeholder="e.g. SR-K01" {...register("code_prefix")} />
-            {errors.code_prefix && (
-              <p className="text-sm text-destructive">{errors.code_prefix.message}</p>
+            <Label htmlFor="code">Plant Code</Label>
+            <Input id="code" placeholder="e.g. SR-001" {...register("code")} />
+            {errors.code && (
+              <p className="text-sm text-destructive">{errors.code.message}</p>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="count">Count (max 500)</Label>
-            <Input id="count" type="number" placeholder="10" {...register("count")} />
-            {errors.count && (
-              <p className="text-sm text-destructive">{errors.count.message}</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="start_index">Start Index</Label>
-            <Input id="start_index" type="number" placeholder="1" {...register("start_index")} />
-            {errors.start_index && (
-              <p className="text-sm text-destructive">{errors.start_index.message}</p>
-            )}
+            <Label htmlFor="status">Status</Label>
+            <Controller
+              control={control}
+              name="status"
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="UNKNOWN">Unknown</SelectItem>
+                    <SelectItem value="HEALTHY">Healthy</SelectItem>
+                    <SelectItem value="WATCHING">Watching</SelectItem>
+                    <SelectItem value="SICK">Sick</SelectItem>
+                    <SelectItem value="DEAD">Dead</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
           </div>
 
           <div className="space-y-2">
@@ -136,11 +141,9 @@ export function BulkGenerateDialog({
               control={control}
               name="zone_id"
               render={({ field }) => (
-                <Select value={field.value || null} onValueChange={field.onChange}>
+                <Select value={field.value || ""} onValueChange={field.onChange}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a zone">
-                      {zonesData?.find((z) => z.id === field.value)?.name}
-                    </SelectValue>
+                    <SelectValue placeholder="Select a zone" />
                   </SelectTrigger>
                   <SelectContent>
                     {zonesData?.map((zone) => (
@@ -152,9 +155,17 @@ export function BulkGenerateDialog({
                 </Select>
               )}
             />
-            {errors.zone_id && (
-              <p className="text-sm text-destructive">{errors.zone_id.message}</p>
-            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="grid_x">Grid X (Optional)</Label>
+              <Input id="grid_x" type="number" step="any" placeholder="X coordinate" {...register("grid_x")} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="grid_y">Grid Y (Optional)</Label>
+              <Input id="grid_y" type="number" step="any" placeholder="Y coordinate" {...register("grid_y")} />
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -165,18 +176,13 @@ export function BulkGenerateDialog({
             )}
           </div>
 
-          <DialogFooter className="pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isSubmitting}
-            >
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Generate
+              Create Plant
             </Button>
           </DialogFooter>
         </form>

@@ -104,20 +104,36 @@ export function PrintTagsDialog({ open, onOpenChange, gardenId }: PrintTagsDialo
   const [tagImages, setTagImages] = useState<Record<string, string>>({});
   const [isReady, setIsReady] = useState(false);
 
-  const { data, isLoading } = useQuery<PaginatedResponse<Plant>>({
-    queryKey: ["plants", gardenId],
-    queryFn: () => api.get(`api/gardens/${gardenId}/plants?limit=500`).json(),
-    enabled: open && !!gardenId,
-  });
+  const [allPlants, setAllPlants] = useState<Plant[]>([]);
 
   const handlePrepare = async () => {
-    if (!data?.items) return;
     setIsGenerating(true);
     setIsReady(false);
 
     try {
+      let fetchedPlants: Plant[] = [];
+      let currentOffset = 0;
+      const limit = 100;
+      let hasMore = true;
+
+      while (hasMore) {
+        const res: PaginatedResponse<Plant> = await api
+          .get(`api/gardens/${gardenId}/plants?limit=${limit}&offset=${currentOffset}`)
+          .json();
+        
+        fetchedPlants = [...fetchedPlants, ...res.items];
+        
+        if (fetchedPlants.length >= res.total || res.items.length < limit) {
+          hasMore = false;
+        } else {
+          currentOffset += limit;
+        }
+      }
+
+      setAllPlants(fetchedPlants);
+
       const images: Record<string, string> = {};
-      for (const plant of data.items) {
+      for (const plant of fetchedPlants) {
         images[plant.code] = await generateTagImage(plant.code, format);
       }
       setTagImages(images);
@@ -159,13 +175,17 @@ export function PrintTagsDialog({ open, onOpenChange, gardenId }: PrintTagsDialo
             </Button>
             
             {!isReady ? (
-              <Button onClick={handlePrepare} disabled={isGenerating || isLoading}>
-                {isGenerating || isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              <Button
+                type="button"
+                onClick={handlePrepare}
+                disabled={isGenerating}
+              >
+                {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Prepare PDF
               </Button>
             ) : (
               <PDFDownloadLink
-                document={<TagDocument plants={data?.items || []} format={format} tagImages={tagImages} />}
+                document={<TagDocument plants={allPlants} format={format} tagImages={tagImages} />}
                 fileName={`garden-${gardenId}-tags.pdf`}
               >
                 {/* @ts-expect-error type missing react-pdf */}
