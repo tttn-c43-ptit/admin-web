@@ -56,7 +56,7 @@ export function SchedulesPanel({ gardenId }: SchedulesPanelProps) {
 
   const getZoneName = (zoneId: string) => {
     const zone = zones?.find((z) => z.id === zoneId);
-    return zone ? zone.name : zoneId.substring(0, 8) + "...";
+    return zone ? zone.name : "Unknown Zone";
   };
 
   const deleteMutation = useMutation({

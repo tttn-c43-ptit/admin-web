@@ -3,14 +3,14 @@
 import { useState } from "react";
 import { TasksDataTable } from "@/components/tasks/tasks-data-table";
 import { TaskFormDialog } from "@/components/tasks/task-form-dialog";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
 
 export default function TasksPage() {
-  const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const handleTaskCreated = () => {
     setRefreshTrigger((prev) => prev + 1);
-    setIsTaskFormOpen(false);
   };
 
   return (
@@ -18,11 +18,14 @@ export default function TasksPage() {
       <div className="flex items-center justify-between space-y-2">
         <h2 className="text-3xl font-bold tracking-tight">Tasks</h2>
         <div className="flex items-center space-x-2">
-          {/* Will pass user role down to TaskFormDialog or conditionally render inside it */}
           <TaskFormDialog
-            open={isTaskFormOpen}
-            onOpenChange={setIsTaskFormOpen}
             onSuccess={handleTaskCreated}
+            trigger={
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Create Task
+              </Button>
+            }
           />
         </div>
       </div>

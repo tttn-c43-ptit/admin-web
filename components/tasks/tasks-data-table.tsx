@@ -35,6 +35,8 @@ import { Badge } from "@/components/ui/badge";
 import { TaskCompleteDialog } from "@/components/tasks/task-complete-dialog";
 import { getUserRole } from "@/lib/jwt";
 import { TaskFormDialog } from "@/components/tasks/task-form-dialog";
+import { TaskDetailsDialog } from "@/components/tasks/task-details-dialog";
+import { Eye } from "lucide-react";
 
 interface TasksDataTableProps {
   refreshTrigger?: number;
@@ -51,6 +53,9 @@ export function TasksDataTable({ refreshTrigger = 0 }: TasksDataTableProps) {
 
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<TaskOut | null>(null);
+  
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [taskToView, setTaskToView] = useState<TaskOut | null>(null);
 
   // Pagination and Filtering State
   const [pageIndex, setPageIndex] = useState(0);
@@ -168,6 +173,15 @@ export function TasksDataTable({ refreshTrigger = 0 }: TasksDataTableProps) {
             <DropdownMenuContent align="end">
               <DropdownMenuGroup>
                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setTaskToView(task);
+                    setIsDetailsOpen(true);
+                  }}
+                >
+                  <Eye className="mr-2 h-4 w-4" />
+                  View Details
+                </DropdownMenuItem>
                 
                 {/* Everyone (Assignee & Owner) can Start/Complete */}
                 {task.status === "PENDING" && (
@@ -188,28 +202,23 @@ export function TasksDataTable({ refreshTrigger = 0 }: TasksDataTableProps) {
                   </DropdownMenuItem>
                 )}
 
-                {/* Only OWNER can Edit/Cancel */}
-                {role === "OWNER" && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => {
-                      setTaskToEdit(task);
-                      setIsEditOpen(true);
-                    }}>
-                      <Edit2 className="mr-2 h-4 w-4" />
-                      Edit Task
-                    </DropdownMenuItem>
-                    
-                    {task.status !== "CANCELLED" && task.status !== "DONE" && (
-                      <DropdownMenuItem 
-                        className="text-destructive focus:text-destructive"
-                        onClick={() => handleCancelTask(task.id)}
-                      >
-                        <XCircle className="mr-2 h-4 w-4" />
-                        Cancel Task
-                      </DropdownMenuItem>
-                    )}
-                  </>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => {
+                  setTaskToEdit(task);
+                  setIsEditOpen(true);
+                }}>
+                  <Edit2 className="mr-2 h-4 w-4" />
+                  Edit Task
+                </DropdownMenuItem>
+                
+                {task.status !== "CANCELLED" && task.status !== "DONE" && (
+                  <DropdownMenuItem 
+                    className="text-destructive focus:text-destructive"
+                    onClick={() => handleCancelTask(task.id)}
+                  >
+                    <XCircle className="mr-2 h-4 w-4" />
+                    Cancel Task
+                  </DropdownMenuItem>
                 )}
               </DropdownMenuGroup>
             </DropdownMenuContent>
@@ -352,6 +361,14 @@ export function TasksDataTable({ refreshTrigger = 0 }: TasksDataTableProps) {
             fetchTasks();
             setTaskToEdit(null);
           }}
+        />
+      )}
+
+      {isDetailsOpen && taskToView && (
+        <TaskDetailsDialog
+          task={taskToView}
+          open={isDetailsOpen}
+          onOpenChange={setIsDetailsOpen}
         />
       )}
     </div>

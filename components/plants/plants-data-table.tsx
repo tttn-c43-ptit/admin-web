@@ -130,7 +130,7 @@ export function PlantsDataTable({ gardenId }: PlantsDataTableProps) {
         if (!row.original.zone_id) return "Unassigned";
         if (zonesData) {
           const zone = zonesData.find((z) => z.id === row.original.zone_id);
-          return zone ? zone.name : row.original.zone_id;
+          return zone ? zone.name : "Unknown Zone";
         }
         return "Loading...";
       },

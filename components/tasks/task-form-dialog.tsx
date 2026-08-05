@@ -34,9 +34,12 @@ import {
 } from "@/components/ui/select";
 import { Plus, Loader2 } from "lucide-react";
 import { getUserRole } from "@/lib/jwt";
+import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
+import { GardenDetail, PaginatedResponse } from "@/types";
 
 const taskSchema = z.object({
-  garden_id: z.string().uuid("Invalid Garden ID"),
+  garden_id: z.string().uuid("Please select a garden"),
   type: z.enum(["WATER", "FERTILIZE", "SPRAY", "INSPECT", "HARVEST", "OTHER"]),
   description: z.string().max(5000).optional(),
   due_date: z.string().optional(),
@@ -45,18 +48,26 @@ const taskSchema = z.object({
 type TaskFormValues = z.infer<typeof taskSchema>;
 
 interface TaskFormDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   onSuccess: () => void;
   taskToEdit?: TaskOut;
+  gardenId?: string;
+  trigger?: React.ReactElement;
 }
 
 export function TaskFormDialog({
-  open,
-  onOpenChange,
+  open: controlledOpen,
+  onOpenChange: setControlledOpen,
   onSuccess,
   taskToEdit,
+  gardenId,
+  trigger,
 }: TaskFormDialogProps) {
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : uncontrolledOpen;
+  const setOpen = setControlledOpen !== undefined ? setControlledOpen : setUncontrolledOpen;
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [role, setRole] = useState<string | null>(null);
 
@@ -65,10 +76,18 @@ export function TaskFormDialog({
     setRole(getUserRole());
   }, []);
 
+  const { data: gardensResponse } = useQuery<PaginatedResponse<GardenDetail>>({
+    queryKey: ["gardens", "dropdown"],
+    queryFn: () => api.get("api/gardens").json(),
+    enabled: !gardenId,
+  });
+  
+  const gardens = gardensResponse?.items || [];
+
   const form = useForm<TaskFormValues>({
     resolver: zodResolver(taskSchema),
     defaultValues: {
-      garden_id: taskToEdit?.garden_id || "",
+      garden_id: taskToEdit?.garden_id || gardenId || "",
       type: taskToEdit?.type || "WATER",
       description: taskToEdit?.description || "",
       due_date: taskToEdit?.due_date
@@ -76,6 +95,19 @@ export function TaskFormDialog({
         : "",
     },
   });
+
+  useEffect(() => {
+    if (open) {
+      form.reset({
+        garden_id: taskToEdit?.garden_id || gardenId || "",
+        type: taskToEdit?.type || "WATER",
+        description: taskToEdit?.description || "",
+        due_date: taskToEdit?.due_date
+          ? new Date(taskToEdit.due_date).toISOString().slice(0, 16)
+          : "",
+      });
+    }
+  }, [open, taskToEdit, gardenId, form]);
 
   const onSubmit = async (data: TaskFormValues) => {
     setIsSubmitting(true);
@@ -91,6 +123,7 @@ export function TaskFormDialog({
         await api.post("api/tasks", { json: payload });
       }
       form.reset();
+      setOpen(false);
       onSuccess();
     } catch (error) {
       console.error("Failed to save task", error);
@@ -100,20 +133,24 @@ export function TaskFormDialog({
   };
 
   // Only OWNER can create tasks
-  if (role === null) return null; // Avoid hydration mismatch or rendering before role is loaded
-  if (role !== "OWNER" && !taskToEdit) {
-    return null;
-  }
+  // if (role === null) return null; // Avoid hydration mismatch or rendering before role is loaded
+  // if (role !== "OWNER" && !taskToEdit) {
+  //   return null;
+  // }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={setOpen}>
       {!taskToEdit && (
-        <DialogTrigger render={
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            Create Task
-          </Button>
-        } />
+        trigger ? (
+          <DialogTrigger render={trigger} />
+        ) : (
+          <DialogTrigger render={
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Create Task
+            </Button>
+          } />
+        )
       )}
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
@@ -124,19 +161,40 @@ export function TaskFormDialog({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="garden_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Garden ID</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter Garden UUID" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {!gardenId && (
+              <FormField
+                control={form.control}
+                name="garden_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Garden</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a garden">
+                            {field.value ? gardens.find(g => g.id === field.value)?.name : undefined}
+                          </SelectValue>
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {gardens.length === 0 ? (
+                          <SelectItem value="empty" disabled>
+                            No gardens found or loading...
+                          </SelectItem>
+                        ) : (
+                          gardens.map((g) => (
+                            <SelectItem key={g.id} value={g.id}>
+                              {g.name}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <FormField
               control={form.control}
