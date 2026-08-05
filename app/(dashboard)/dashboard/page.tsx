@@ -8,6 +8,7 @@ import { GardenSelector } from "@/components/dashboard/garden-selector";
 import { StatsCards } from "@/components/dashboard/stats-cards";
 import { StatusBreakdownChart } from "@/components/dashboard/status-breakdown-chart";
 import { WeeklyTrendChart } from "@/components/dashboard/weekly-trend-chart";
+import { ZoneStatsChart } from "@/components/dashboard/zone-stats-chart";
 import { EarlyWarningsList } from "@/components/dashboard/early-warnings-list";
 import { AiSummaryCard } from "@/components/dashboard/ai-summary-card";
 import { Loader2, AlertCircle } from "lucide-react";
@@ -60,6 +61,10 @@ export default function DashboardPage() {
             <div className="lg:col-span-2">
               <WeeklyTrendChart stats={stats} />
             </div>
+          </div>
+
+          <div className="w-full">
+            <ZoneStatsChart stats={stats} />
           </div>
 
           <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">

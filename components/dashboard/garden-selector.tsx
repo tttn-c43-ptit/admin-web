@@ -56,7 +56,9 @@ export function GardenSelector({ value, onChange }: GardenSelectorProps) {
       <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">Garden:</span>
       <Select value={value} onValueChange={(val) => { if (val) onChange(val); }}>
         <SelectTrigger className="w-[200px]">
-          <SelectValue placeholder="Select a garden" />
+          <SelectValue placeholder="Select a garden">
+            {gardens.find((g) => g.id === value)?.name}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           {gardens.map((garden) => (
