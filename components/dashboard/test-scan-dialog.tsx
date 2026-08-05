@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiClient as api } from "@/lib/api-client";
-import { ScanResult } from "@/types";
+import { ScanResult, Zone } from "@/types";
+import { queryKeys } from "@/lib/query-keys";
 import {
   Dialog,
   DialogContent,
@@ -32,6 +33,18 @@ export function TestScanDialog({ open, onOpenChange }: TestScanDialogProps) {
     enabled: !!searchedCode,
     retry: false,
   });
+
+  const { data: zones } = useQuery<Zone[]>({
+    queryKey: queryKeys.zones(scanResult?.garden.id || ""),
+    queryFn: () => api.get(`api/gardens/${scanResult!.garden.id}/zones`).json(),
+    enabled: !!scanResult?.garden.id,
+  });
+
+  const getZoneName = (zoneId: string | null) => {
+    if (!zoneId) return "Unassigned";
+    const zone = zones?.find((z) => z.id === zoneId);
+    return zone ? zone.name : zoneId.substring(0, 8) + "...";
+  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,7 +98,7 @@ export function TestScanDialog({ open, onOpenChange }: TestScanDialogProps) {
                 </div>
                 <div>
                   <span className="font-medium text-muted-foreground block">Zone:</span>
-                  {scanResult.plant.zone_id || "Unassigned"}
+                  {getZoneName(scanResult.plant.zone_id)}
                 </div>
               </div>
 

@@ -5,7 +5,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { apiClient as api } from "@/lib/api-client";
-import { PaginatedResponse, Plant } from "@/types";
+import { PaginatedResponse, Plant, Zone } from "@/types";
+import { queryKeys } from "@/lib/query-keys";
 
 import {
   Dialog,
@@ -59,6 +60,18 @@ export function TraceCodeFormDialog({
       api.get(`api/gardens/${gardenId}/plants?limit=200&offset=0`).json<PaginatedResponse<Plant>>(),
     enabled: open && !!gardenId,
   });
+
+  const { data: zones } = useQuery<Zone[]>({
+    queryKey: queryKeys.zones(gardenId),
+    queryFn: () => api.get(`api/gardens/${gardenId}/zones`).json(),
+    enabled: open && !!gardenId,
+  });
+
+  const getZoneName = (zoneId: string | null) => {
+    if (!zoneId) return "None";
+    const zone = zones?.find(z => z.id === zoneId);
+    return zone ? zone.name : zoneId.substring(0,8) + "...";
+  };
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -130,7 +143,7 @@ export function TraceCodeFormDialog({
                     >
                       {plantsData?.items.map((plant) => (
                         <option key={plant.id} value={plant.id} className="p-1">
-                          {plant.code} (Zone: {plant.zone_id || 'None'})
+                          {plant.code} (Zone: {getZoneName(plant.zone_id)})
                         </option>
                       ))}
                     </select>

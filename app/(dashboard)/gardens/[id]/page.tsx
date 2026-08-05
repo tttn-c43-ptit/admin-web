@@ -9,8 +9,9 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { ArrowLeft, Map as MapIcon } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ZonesPanel } from "./zones-panel";
-import { ScheduleFormDialog } from "@/components/schedules/schedule-form-dialog";
+import { SchedulesPanel } from "@/components/schedules/schedules-panel";
 
 // Load GardenMap dynamically to avoid SSR issues with Leaflet
 const GardenMap = dynamic(() => import("@/components/garden-map"), {
@@ -81,7 +82,6 @@ export default function GardenDetailPage() {
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          <ScheduleFormDialog gardenId={id} />
         </div>
       </div>
 
@@ -101,7 +101,18 @@ export default function GardenDetailPage() {
         </div>
 
         <div className="lg:col-span-1">
-          <ZonesPanel gardenId={id} />
+          <Tabs defaultValue="zones" className="w-full">
+            <TabsList className="w-full grid grid-cols-2">
+              <TabsTrigger value="zones">Zones</TabsTrigger>
+              <TabsTrigger value="schedules">Schedules</TabsTrigger>
+            </TabsList>
+            <TabsContent value="zones" className="mt-4">
+              <ZonesPanel gardenId={id} />
+            </TabsContent>
+            <TabsContent value="schedules" className="mt-4">
+              <SchedulesPanel gardenId={id} />
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     </div>

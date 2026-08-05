@@ -1,10 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { apiClient as api } from "@/lib/api-client";
+import { localToUtcCron } from "@/lib/cron-utils";
+import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
+import { Zone, ScheduleOut } from "@/types";
+import { parseUtcCronToLocalForm } from "@/lib/cron-utils";
 
 import {
   Dialog,
@@ -48,17 +53,45 @@ type ScheduleFormValues = z.infer<typeof scheduleSchema>;
 
 interface ScheduleFormDialogProps {
   gardenId: string;
+  initialData?: ScheduleOut;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  trigger?: React.ReactElement;
   onSuccess?: () => void;
 }
 
-export function ScheduleFormDialog({ gardenId, onSuccess }: ScheduleFormDialogProps) {
-  const [open, setOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const role = getUserRole();
+export function ScheduleFormDialog({ gardenId, initialData, open: controlledOpen, onOpenChange: setControlledOpen, trigger, onSuccess }: ScheduleFormDialogProps) {
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : uncontrolledOpen;
+  const setOpen = setControlledOpen !== undefined ? setControlledOpen : setUncontrolledOpen;
 
-  const form = useForm<ScheduleFormValues>({
-    resolver: zodResolver(scheduleSchema),
-    defaultValues: {
+  const isEditing = !!initialData;
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { data: user } = useQuery({
+    queryKey: queryKeys.me(),
+    queryFn: () => api.get("api/auth/me").json<{ role: string }>(),
+  });
+  const role = user?.role;
+
+  const { data: zones } = useQuery<Zone[]>({
+    queryKey: queryKeys.zones(gardenId),
+    queryFn: () => api.get(`api/gardens/${gardenId}/zones`).json(),
+  });
+
+  const defaultValues = (() => {
+    if (initialData) {
+      const parsedCron = parseUtcCronToLocalForm(initialData.cron_expr);
+      return {
+        type: initialData.type as any,
+        description: initialData.description || "",
+        zone_id: initialData.zone_id || "",
+        frequency: parsedCron.frequency,
+        time: parsedCron.time,
+        dayOfWeek: parsedCron.dayOfWeek,
+        dayOfMonth: parsedCron.dayOfMonth,
+      };
+    }
+    return {
       type: "WATER",
       description: "",
       zone_id: "",
@@ -66,8 +99,20 @@ export function ScheduleFormDialog({ gardenId, onSuccess }: ScheduleFormDialogPr
       time: "08:00",
       dayOfWeek: "1",
       dayOfMonth: "1",
-    },
+    };
+  })();
+
+  const form = useForm<ScheduleFormValues>({
+    resolver: zodResolver(scheduleSchema),
+    defaultValues: defaultValues as any,
   });
+
+  // Reset form when dialog opens if editing
+  useEffect(() => {
+    if (open) {
+      form.reset(defaultValues as any);
+    }
+  }, [open, initialData]);
 
   const frequency = form.watch("frequency");
 
@@ -76,14 +121,7 @@ export function ScheduleFormDialog({ gardenId, onSuccess }: ScheduleFormDialogPr
     try {
       const [hour, minute] = data.time.split(":");
       
-      let cron_expr = "";
-      if (data.frequency === "DAILY") {
-        cron_expr = `${parseInt(minute)} ${parseInt(hour)} * * *`;
-      } else if (data.frequency === "WEEKLY") {
-        cron_expr = `${parseInt(minute)} ${parseInt(hour)} * * ${data.dayOfWeek}`;
-      } else if (data.frequency === "MONTHLY") {
-        cron_expr = `${parseInt(minute)} ${parseInt(hour)} ${data.dayOfMonth} * *`;
-      }
+      let cron_expr = localToUtcCron(data.frequency, data.time, data.dayOfWeek || "1", data.dayOfMonth || "1");
 
       const payload = {
         type: data.type,
@@ -93,7 +131,11 @@ export function ScheduleFormDialog({ gardenId, onSuccess }: ScheduleFormDialogPr
         is_active: true,
       };
 
-      await api.post(`api/gardens/${gardenId}/schedules`, { json: payload });
+      if (isEditing) {
+        await api.put(`api/schedules/${initialData.id}`, { json: payload });
+      } else {
+        await api.post(`api/gardens/${gardenId}/schedules`, { json: payload });
+      }
       
       form.reset();
       setOpen(false);
@@ -111,15 +153,19 @@ export function ScheduleFormDialog({ gardenId, onSuccess }: ScheduleFormDialogPr
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={
-        <Button variant="outline">
-          <CalendarClock className="mr-2 h-4 w-4" />
-          Create Schedule
-        </Button>
-      } />
+      {trigger ? (
+        <DialogTrigger render={trigger} />
+      ) : (
+        <DialogTrigger render={
+          <Button variant="outline">
+            <CalendarClock className="mr-2 h-4 w-4" />
+            Create Schedule
+          </Button>
+        } />
+      )}
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Create Recurring Schedule</DialogTitle>
+          <DialogTitle>{isEditing ? "Edit Schedule" : "Create Recurring Schedule"}</DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
@@ -132,7 +178,7 @@ export function ScheduleFormDialog({ gardenId, onSuccess }: ScheduleFormDialogPr
                   <FormLabel>Task Type</FormLabel>
                   <Select
                     onValueChange={field.onChange}
-                    defaultValue={field.value}
+                    value={field.value}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -161,7 +207,7 @@ export function ScheduleFormDialog({ gardenId, onSuccess }: ScheduleFormDialogPr
                   <FormLabel>Frequency</FormLabel>
                   <Select
                     onValueChange={field.onChange}
-                    defaultValue={field.value}
+                    value={field.value}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -203,7 +249,7 @@ export function ScheduleFormDialog({ gardenId, onSuccess }: ScheduleFormDialogPr
                       <FormLabel>Day of Week</FormLabel>
                       <Select
                         onValueChange={field.onChange}
-                        defaultValue={field.value}
+                        value={field.value}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -253,10 +299,27 @@ export function ScheduleFormDialog({ gardenId, onSuccess }: ScheduleFormDialogPr
               name="zone_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Zone ID (Optional)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Apply to specific zone" {...field} />
-                  </FormControl>
+                  <FormLabel>Zone (Optional)</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Apply to specific zone">
+                          {field.value ? zones?.find(z => z.id === field.value)?.name || "All Zones (Entire Garden)" : "All Zones (Entire Garden)"}
+                        </SelectValue>
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="">All Zones (Entire Garden)</SelectItem>
+                      {zones?.map((zone) => (
+                        <SelectItem key={zone.id} value={zone.id}>
+                          {zone.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
@@ -280,16 +343,16 @@ export function ScheduleFormDialog({ gardenId, onSuccess }: ScheduleFormDialogPr
             />
 
             <div className="flex justify-end pt-4">
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  "Create Schedule"
-                )}
-              </Button>
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                isEditing ? "Save Changes" : "Create Schedule"
+              )}
+            </Button>
             </div>
           </form>
         </Form>

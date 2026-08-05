@@ -26,7 +26,8 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { PaginatedResponse, Plant } from "@/types";
+import { PaginatedResponse, Plant, Zone } from "@/types";
+import { queryKeys } from "@/lib/query-keys";
 
 const formSchema = z.object({
   plant_id: z.string().min(1, "Plant is required"),
@@ -61,6 +62,18 @@ export function HarvestFormDialog({
       api.get(`api/gardens/${gardenId}/plants?limit=100&offset=0`).json<PaginatedResponse<Plant>>(),
     enabled: open && !!gardenId,
   });
+
+  const { data: zones } = useQuery<Zone[]>({
+    queryKey: queryKeys.zones(gardenId),
+    queryFn: () => api.get(`api/gardens/${gardenId}/zones`).json(),
+    enabled: open && !!gardenId,
+  });
+
+  const getZoneName = (zoneId: string | null) => {
+    if (!zoneId) return "None";
+    const zone = zones?.find(z => z.id === zoneId);
+    return zone ? zone.name : zoneId.substring(0,8) + "...";
+  };
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -117,7 +130,7 @@ export function HarvestFormDialog({
                       <option value="" disabled>Select a plant...</option>
                       {plantsData?.items.map((plant) => (
                         <option key={plant.id} value={plant.id}>
-                          {plant.code} (Zone: {plant.zone_id || 'None'})
+                          {plant.code} (Zone: {getZoneName(plant.zone_id)})
                         </option>
                       ))}
                     </select>

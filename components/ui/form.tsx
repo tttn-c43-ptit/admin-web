@@ -103,9 +103,9 @@ FormLabel.displayName = "FormLabel"
 const FormControl = React.forwardRef<
   HTMLElement,
   React.HTMLAttributes<HTMLElement>
->(({ ...props }, ref) => {
+>(({ children, ...props }, ref) => {
   const { error, formItemId, formDescriptionId, formMessageId } = useFormField()
-  const child = React.Children.only(props.children) as React.ReactElement
+  const child = React.Children.only(children) as React.ReactElement
 
   return React.cloneElement(child, {
     ref,
