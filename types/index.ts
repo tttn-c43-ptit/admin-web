@@ -12,9 +12,11 @@ export interface PaginatedResponse<T> {
 
 export interface User {
   id: string;
-  identifier: string;
+  email: string | null;
+  phone: string | null;
+  full_name: string;
   role: 'OWNER' | 'STAFF';
-  status: string;
+  is_active: boolean;
   created_at: string;
 }
 
@@ -49,7 +51,7 @@ export interface Zone {
 
 export interface ZoneAssignment {
   user_id: string;
-  user_identifier: string;
+  full_name: string;
   assigned_at: string;
 }
 

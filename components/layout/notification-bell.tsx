@@ -11,6 +11,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { apiClient as api } from "@/lib/api-client";
+import { getAccessToken } from "@/lib/auth";
 import { NotificationOut, PaginatedResponse, UnreadCount } from "@/types";
 
 export function NotificationBell() {
@@ -22,6 +23,7 @@ export function NotificationBell() {
   // Poll for unread count every 30 seconds
   useEffect(() => {
     const fetchUnreadCount = async () => {
+      if (!getAccessToken()) return; // Skip if not logged in
       try {
         const data = await api.get("api/notifications/unread-count").json<UnreadCount>();
         setUnreadCount(data.unread);

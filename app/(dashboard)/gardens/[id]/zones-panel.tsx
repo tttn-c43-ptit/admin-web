@@ -58,7 +58,7 @@ export function ZonesPanel({ gardenId }: ZonesPanelProps) {
   });
 
   const createMutation = useMutation({
-    mutationFn: (newZone: CreateZoneFormValues) =>
+    mutationFn: (newZone: { name: string; grid_position?: number }) =>
       api.post(`api/gardens/${gardenId}/zones`, { json: newZone }).json<Zone>(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.zones(gardenId) });
@@ -68,14 +68,19 @@ export function ZonesPanel({ gardenId }: ZonesPanelProps) {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (zoneId: string) => api.delete(`api/zones/${zoneId}`).json(),
+    mutationFn: async (zoneId: string) => {
+      await api.delete(`api/zones/${zoneId}`);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.zones(gardenId) });
     },
   });
 
   const onSubmit = (values: CreateZoneFormValues) => {
-    createMutation.mutate(values);
+    createMutation.mutate({
+      name: values.name,
+      grid_position: values.grid_position ? parseInt(values.grid_position, 10) : undefined,
+    });
   };
 
   return (
@@ -110,8 +115,9 @@ export function ZonesPanel({ gardenId }: ZonesPanelProps) {
                 <Label htmlFor="grid_position">Grid Position (Optional)</Label>
                 <Input
                   id="grid_position"
+                  type="number"
                   {...register("grid_position")}
-                  placeholder="E.g., 0,0"
+                  placeholder="E.g., 1 or 101"
                 />
               </div>
               <div className="flex justify-end space-x-2 pt-4">
@@ -175,8 +181,9 @@ function ZoneCard({ zone, onDelete }: { zone: Zone; onDelete: () => void }) {
   });
 
   const unassignMutation = useMutation({
-    mutationFn: (userId: string) =>
-      api.delete(`api/zones/${zone.id}/assignments/${userId}`).json(),
+    mutationFn: async (userId: string) => {
+      await api.delete(`api/zones/${zone.id}/assignments/${userId}`);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.zoneAssignments(zone.id) });
     },
@@ -227,7 +234,7 @@ function ZoneCard({ zone, onDelete }: { zone: Zone; onDelete: () => void }) {
                     <option value="" disabled>Select a staff member...</option>
                     {availableStaff.map((s) => (
                       <option key={s.id} value={s.id}>
-                        {s.identifier}
+                        {s.full_name} {s.email ? `(${s.email})` : ""}
                       </option>
                     ))}
                   </select>
@@ -257,7 +264,7 @@ function ZoneCard({ zone, onDelete }: { zone: Zone; onDelete: () => void }) {
                 key={assignment.user_id} 
                 className="inline-flex items-center gap-1 bg-background border px-2 py-1 rounded-md text-xs"
               >
-                <span>{assignment.user_identifier}</span>
+                <span>{assignment.full_name}</span>
                 <button 
                   onClick={() => unassignMutation.mutate(assignment.user_id)}
                   className="text-muted-foreground hover:text-destructive"
