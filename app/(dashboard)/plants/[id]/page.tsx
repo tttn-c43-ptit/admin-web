@@ -27,10 +27,11 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { AIDiagnosisDialog } from "@/components/plants/ai-diagnosis-dialog";
 import { formatDate } from "@/lib/utils";
+import { PrintSingleTagDialog } from "@/components/plants/print-single-tag-dialog";
 // @ts-expect-error no types available
 import QRCode from "qrcode";
 import JsBarcode from "jsbarcode";
-import { ArrowLeft, Edit2, History, QrCode, Plus, Images, Sparkles, Trash2 } from "lucide-react";
+import { ArrowLeft, Edit2, History, QrCode, Plus, Images, Sparkles, Trash2, Printer } from "lucide-react";
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
 
@@ -55,6 +56,7 @@ export default function PlantDetailPage() {
 
   const [isUpdatePlantOpen, setIsUpdatePlantOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isPrintSingleOpen, setIsPrintSingleOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const { data: plant, isLoading: isPlantLoading, refetch: refetchPlant } = useQuery<PlantDetail>({
@@ -164,10 +166,16 @@ export default function PlantDetailPage() {
                 <div className="text-xs text-muted-foreground mb-4">
                   {plant.current_tag?.tag_type} • {plant.current_tag?.status}
                 </div>
-                <Button variant="outline" size="sm" onClick={() => setIsTagManagerOpen(true)}>
-                  <Edit2 className="mr-2 h-3 w-3" />
-                  Replace Tag
-                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setIsTagManagerOpen(true)}>
+                    <Edit2 className="mr-2 h-3 w-3" />
+                    Replace Tag
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setIsPrintSingleOpen(true)}>
+                    <Printer className="mr-2 h-3 w-3" />
+                    Print Tag
+                  </Button>
+                </div>
               </>
             ) : (
               <div className="py-8 flex flex-col items-center">
@@ -277,6 +285,14 @@ export default function PlantDetailPage() {
           open={isCompareOpen}
           onOpenChange={setIsCompareOpen}
           timeline={logsData.items}
+        />
+      )}
+
+      {plant && (
+        <PrintSingleTagDialog
+          open={isPrintSingleOpen}
+          onOpenChange={setIsPrintSingleOpen}
+          plant={plant}
         />
       )}
 

@@ -141,9 +141,11 @@ export function CreatePlantDialog({
               control={control}
               name="zone_id"
               render={({ field }) => (
-                <Select value={field.value || ""} onValueChange={field.onChange}>
+                <Select value={field.value || undefined} onValueChange={field.onChange}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a zone" />
+                    <SelectValue placeholder="Select a zone">
+                      {field.value ? zonesData?.find(z => z.id === field.value)?.name : "Select a zone"}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {zonesData?.map((zone) => (

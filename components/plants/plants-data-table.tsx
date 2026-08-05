@@ -39,6 +39,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
@@ -54,6 +55,7 @@ import { toast } from "sonner";
 // Dialog components
 import { BulkGenerateDialog } from "@/components/plants/bulk-generate-dialog";
 import { PrintTagsDialog } from "@/components/plants/print-tags-dialog";
+import { PrintSingleTagDialog } from "@/components/plants/print-single-tag-dialog";
 import { CreatePlantDialog } from "@/components/plants/create-plant-dialog";
 import { UpdatePlantDialog } from "@/components/plants/update-plant-dialog";
 
@@ -64,7 +66,7 @@ interface PlantsDataTableProps {
 export function PlantsDataTable({ gardenId }: PlantsDataTableProps) {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(15);
+  const [pageSize, setPageSize] = useState(10);
   
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
@@ -73,6 +75,10 @@ export function PlantsDataTable({ gardenId }: PlantsDataTableProps) {
 
   const [isBulkGenerateOpen, setIsBulkGenerateOpen] = useState(false);
   const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false);
+  
+  const [isPrintSingleOpen, setIsPrintSingleOpen] = useState(false);
+  const [plantToPrint, setPlantToPrint] = useState<Plant | null>(null);
+
   const [isCreatePlantOpen, setIsCreatePlantOpen] = useState(false);
   const [isUpdatePlantOpen, setIsUpdatePlantOpen] = useState(false);
   const [plantToUpdate, setPlantToUpdate] = useState<Plant | null>(null);
@@ -155,7 +161,17 @@ export function PlantsDataTable({ gardenId }: PlantsDataTableProps) {
                 </Button>
               } />
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                  <DropdownMenuItem
+                  onClick={() => {
+                    setPlantToPrint(plant);
+                    setIsPrintSingleOpen(true);
+                  }}
+                >
+                  <Printer className="mr-2 h-4 w-4" />
+                  Print Tag
+                </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {
                     setPlantToUpdate(plant);
@@ -164,18 +180,21 @@ export function PlantsDataTable({ gardenId }: PlantsDataTableProps) {
                 >
                   <Edit2 className="mr-2 h-4 w-4" />
                   Edit Plant
-                </DropdownMenuItem>
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="text-destructive focus:text-destructive"
-                  onClick={() => {
-                    setPlantToDelete(plant);
-                    setIsDeleteDialogOpen(true);
-                  }}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete Plant
-                </DropdownMenuItem>
+                <DropdownMenuGroup>
+                  <DropdownMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onClick={() => {
+                      setPlantToDelete(plant);
+                      setIsDeleteDialogOpen(true);
+                    }}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete Plant
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -381,6 +400,14 @@ export function PlantsDataTable({ gardenId }: PlantsDataTableProps) {
         onOpenChange={setIsPrintDialogOpen}
         gardenId={gardenId}
       />
+
+      {plantToPrint && (
+        <PrintSingleTagDialog
+          open={isPrintSingleOpen}
+          onOpenChange={setIsPrintSingleOpen}
+          plant={plantToPrint}
+        />
+      )}
 
       <CreatePlantDialog
         open={isCreatePlantOpen}
