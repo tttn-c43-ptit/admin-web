@@ -53,11 +53,11 @@ export function TraceCodeFormDialog({
 }: TraceCodeFormDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Fetch plants to select
+  // Fetch plants to select (max 100 per FastAPI limit schema)
   const { data: plantsData } = useQuery({
     queryKey: ["plants", gardenId, "list-all"],
     queryFn: () =>
-      api.get(`api/gardens/${gardenId}/plants?limit=200&offset=0`).json<PaginatedResponse<Plant>>(),
+      api.get(`api/gardens/${gardenId}/plants?limit=100&offset=0`).json<PaginatedResponse<Plant>>(),
     enabled: open && !!gardenId,
   });
 
@@ -141,11 +141,16 @@ export function TraceCodeFormDialog({
                         field.onChange(values);
                       }}
                     >
-                      {plantsData?.items.map((plant) => (
-                        <option key={plant.id} value={plant.id} className="p-1">
-                          {plant.code} (Zone: {getZoneName(plant.zone_id)})
-                        </option>
-                      ))}
+                      {plantsData?.items.map((plant) => {
+                        const codeDisplay = plant.code.length === 36 && plant.code.includes("-")
+                          ? `Plant #${plant.code.substring(0, 8)}`
+                          : plant.code;
+                        return (
+                          <option key={plant.id} value={plant.id} className="p-1">
+                            {codeDisplay} (Zone: {getZoneName(plant.zone_id)})
+                          </option>
+                        );
+                      })}
                     </select>
                   </FormControl>
                   <FormMessage />

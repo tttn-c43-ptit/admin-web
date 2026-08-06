@@ -28,7 +28,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
-import { Plus, MoreHorizontal, QrCode, Trash2, ExternalLink } from "lucide-react";
+import { Plus, MoreHorizontal, QrCode, Trash2, ExternalLink, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { TraceCodeFormDialog } from "@/components/trace-codes/trace-code-form-dialog";
 import Link from "next/link";
@@ -107,6 +107,14 @@ export default function TraceCodesPage() {
                 <Link href={`/trace/${item.code}`} target="_blank" className="cursor-pointer w-full flex items-center">
                   <ExternalLink className="mr-2 h-4 w-4" /> View Public Page
                 </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  navigator.clipboard.writeText(`${window.location.origin}/trace/${item.code}`);
+                  toast.success("Trace link copied to clipboard");
+                }}
+              >
+                <Copy className="mr-2 h-4 w-4" /> Copy Trace Link
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleDelete(item.id)} className="text-red-600">
                 <Trash2 className="mr-2 h-4 w-4" /> Delete

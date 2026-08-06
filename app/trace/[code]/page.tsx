@@ -1,21 +1,31 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { apiClient as api } from "@/lib/api-client";
 import { PublicTrace } from "@/types";
 import { format } from "date-fns";
-import { Leaf, Calendar, CheckCircle2, Tractor, Activity, Loader2, MapPin } from "lucide-react";
+import { Leaf, Calendar, CheckCircle2, Tractor, Activity, Loader2, MapPin, Copy, Check } from "lucide-react";
 
 export default function PublicTracePage() {
   const params = useParams();
   const code = params.code as string;
+  const [copied, setCopied] = useState(false);
 
   const { data: traceData, isLoading, error } = useQuery({
     queryKey: ["trace", code],
     queryFn: () => api.get(`api/trace/${code}`).json<PublicTrace>(),
     retry: false,
   });
+
+  const handleCopy = () => {
+    if (traceData?.code) {
+      navigator.clipboard.writeText(traceData.code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -42,26 +52,43 @@ export default function PublicTracePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#fdfaf6] font-sans text-gray-800 selection:bg-green-100 pb-12">
-      {/* Header Banner */}
-      <div className="bg-green-800 text-white p-8 pb-12 rounded-b-[2rem] shadow-md relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-white to-transparent" />
-        <div className="max-w-3xl mx-auto relative z-10 text-center space-y-3">
-          <div className="inline-flex items-center justify-center p-3 bg-white/20 rounded-full mb-2 backdrop-blur-sm">
-            <Leaf className="w-8 h-8 text-green-100" />
+    <div className="min-h-screen bg-[#fdfaf6] font-sans text-gray-800 selection:bg-emerald-800 selection:text-white pb-12">
+      {/* Header Banner - Full Width Rich Emerald Curved Header */}
+      <div className="w-full bg-gradient-to-r from-emerald-950 via-green-900 to-teal-950 text-white pt-8 pb-12 px-4 sm:px-8 rounded-b-[2rem] shadow-lg relative overflow-hidden selection:bg-emerald-950 selection:text-emerald-100">
+        {/* Decorative background glows */}
+        <div className="absolute -top-12 -right-12 w-64 h-64 bg-emerald-400/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-12 -left-12 w-64 h-64 bg-teal-400/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 relative z-10">
+          <div className="flex items-center gap-3.5 text-center sm:text-left">
+            <div className="p-3 bg-white/15 backdrop-blur-md rounded-2xl border border-white/20 shadow-inner shrink-0">
+              <Leaf className="w-7 h-7 text-green-200" />
+            </div>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-tight">Product Journey</h1>
+              <p className="text-xs sm:text-sm text-green-100/80 font-medium">Official Traceability Report</p>
+            </div>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight">Product Journey</h1>
-          <p className="text-green-100/90 font-medium">Traceability Report</p>
-          <div className="inline-block mt-4 bg-white/10 px-4 py-1.5 rounded-full border border-white/20 font-mono text-sm shadow-inner text-green-50 tracking-wider">
-            {traceData.code}
-          </div>
+
+          <button
+            onClick={handleCopy}
+            title="Click to copy trace code"
+            className="group bg-white/15 hover:bg-white/25 active:scale-95 backdrop-blur-md px-4 py-2 rounded-xl border border-white/25 font-mono text-xs sm:text-sm font-bold tracking-wider text-white shadow-sm flex items-center gap-2 transition-all duration-200"
+          >
+            <span>{traceData.code}</span>
+            {copied ? (
+              <Check className="w-4 h-4 text-green-300 animate-in zoom-in" />
+            ) : (
+              <Copy className="w-4 h-4 text-white/70 group-hover:text-white transition-colors" />
+            )}
+          </button>
         </div>
       </div>
 
-      <div className="max-w-3xl mx-auto -mt-6 px-4 space-y-6">
+      <div className="max-w-3xl mx-auto -mt-4 px-4 space-y-6">
         
         {/* Main Info Card */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8 pt-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-4">
               <div>
