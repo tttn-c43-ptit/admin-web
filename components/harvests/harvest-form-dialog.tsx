@@ -43,7 +43,7 @@ interface HarvestFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   gardenId: string;
-  onSuccess: () => void;
+  onSuccess: (plantId?: string) => void;
 }
 
 export function HarvestFormDialog({
@@ -99,7 +99,7 @@ export function HarvestFormDialog({
       });
       toast.success("Harvest recorded successfully");
       form.reset();
-      onSuccess();
+      onSuccess(values.plant_id);
     } catch (err) {
       toast.error("Failed to record harvest");
     } finally {
@@ -128,11 +128,16 @@ export function HarvestFormDialog({
                       {...field}
                     >
                       <option value="" disabled>Select a plant...</option>
-                      {plantsData?.items.map((plant) => (
-                        <option key={plant.id} value={plant.id}>
-                          {plant.code} (Zone: {getZoneName(plant.zone_id)})
-                        </option>
-                      ))}
+                      {plantsData?.items.map((plant) => {
+                        const codeDisplay = plant.code.length === 36 && plant.code.includes("-")
+                          ? `Plant #${plant.code.substring(0, 8)}`
+                          : plant.code;
+                        return (
+                          <option key={plant.id} value={plant.id}>
+                            {codeDisplay} (Zone: {getZoneName(plant.zone_id)})
+                          </option>
+                        );
+                      })}
                     </select>
                   </FormControl>
                   <FormMessage />

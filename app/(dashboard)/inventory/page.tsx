@@ -114,7 +114,7 @@ export default function InventoryPage() {
     },
     {
       accessorKey: "min_quantity",
-      header: "Min Qty",
+      header: "Min Quantity",
       cell: ({ row }) => <div className="font-mono">{row.original.min_quantity} {row.original.unit || ""}</div>,
     },
     {
