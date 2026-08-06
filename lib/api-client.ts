@@ -17,11 +17,14 @@ export const apiClient = ky.create({
     afterResponse: [
       async ({ request, response }) => {
         if (response.status === 401) {
+          // Do not attempt refresh loop on login or refresh endpoints
+          if (request.url.includes('/api/auth/login') || request.url.includes('/api/auth/refresh')) {
+            return;
+          }
+
           const refreshToken = getRefreshToken();
           if (refreshToken) {
             try {
-              // Note: the backend route for refreshing token depends on the actual API structure
-              // Assuming it's POST /api/auth/refresh as suggested
               const { access_token, refresh_token } = await ky.post(`${API_URL}/api/auth/refresh`, {
                 json: { refresh_token: refreshToken }
               }).json<{ access_token: string; refresh_token: string }>();
@@ -29,19 +32,21 @@ export const apiClient = ky.create({
               setAccessToken(access_token);
               if (refresh_token) setRefreshToken(refresh_token);
 
-              // Retry the original request
-              request.headers.set('Authorization', `Bearer ${access_token}`);
-              return ky(request);
+              const newHeaders = new Headers(request.headers);
+              newHeaders.set('Authorization', `Bearer ${access_token}`);
+              return ky(request.url, {
+                headers: newHeaders,
+                method: request.method,
+              });
             } catch {
-              // Refresh failed, clear tokens and redirect to login
               clearTokens();
-              if (typeof window !== 'undefined') {
+              if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
                 window.location.href = '/login';
               }
             }
           } else {
             clearTokens();
-            if (typeof window !== 'undefined') {
+            if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
               window.location.href = '/login';
             }
           }

@@ -64,7 +64,7 @@ export function EditTaskDialog({
   const { data: staffList } = useQuery<User[]>({
     queryKey: queryKeys.staff(),
     queryFn: () => api.get("api/staff").json(),
-    enabled: userRole === "OWNER" && open,
+    enabled: open,
   });
 
   const {
@@ -102,6 +102,7 @@ export function EditTaskDialog({
       const payload: any = {
         type: values.type,
         status: values.status,
+        assignee_id: values.assignee_id || null,
       };
 
       if (values.description) {
@@ -110,10 +111,6 @@ export function EditTaskDialog({
       
       if (values.due_date) {
         payload.due_date = new Date(values.due_date).toISOString();
-      }
-
-      if (userRole === "OWNER" && values.assignee_id) {
-        payload.assignee_id = values.assignee_id;
       }
 
       await api.put(`api/tasks/${task.id}`, {
@@ -204,31 +201,31 @@ export function EditTaskDialog({
             {errors.due_date && <p className="text-sm text-destructive">{errors.due_date.message}</p>}
           </div>
 
-          {userRole === "OWNER" && (
-            <div className="space-y-2">
-              <Label>Assignee (Optional)</Label>
-              <Controller
-                control={control}
-                name="assignee_id"
-                render={({ field }) => (
-                  <Select onValueChange={field.onChange} value={field.value || ""}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select assignee" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">Unassigned</SelectItem>
-                      {staffList?.map((staff) => (
-                        <SelectItem key={staff.id} value={staff.id}>
-                          {staff.full_name} {staff.email ? `(${staff.email})` : ""}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-              {errors.assignee_id && <p className="text-sm text-destructive">{errors.assignee_id.message}</p>}
-            </div>
-          )}
+          <div className="space-y-2">
+            <Label>Assignee (Optional)</Label>
+            <Controller
+              control={control}
+              name="assignee_id"
+              render={({ field }) => (
+                <Select onValueChange={field.onChange} value={field.value || ""}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select assignee">
+                      {field.value ? staffList?.find((s) => s.id === field.value)?.full_name : undefined}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Unassigned</SelectItem>
+                    {staffList?.map((staff) => (
+                      <SelectItem key={staff.id} value={staff.id}>
+                        {staff.full_name} {staff.email ? `(${staff.email})` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            {errors.assignee_id && <p className="text-sm text-destructive">{errors.assignee_id.message}</p>}
+          </div>
 
           <div className="flex justify-end space-x-2 pt-4">
             <Button

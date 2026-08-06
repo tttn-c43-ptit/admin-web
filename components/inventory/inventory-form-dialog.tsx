@@ -176,8 +176,14 @@ export function InventoryFormDialog({
                         type="number"
                         step="any"
                         min="0"
-                        {...field}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        placeholder="0"
+                        className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        value={field.value === 0 ? "" : field.value}
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          field.onChange(val === "" ? 0 : parseFloat(val) || 0);
+                        }}
                       />
                     </FormControl>
                     <FormMessage />

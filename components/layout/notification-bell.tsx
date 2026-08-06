@@ -27,8 +27,10 @@ export function NotificationBell() {
       try {
         const data = await api.get("api/notifications/unread-count").json<UnreadCount>();
         setUnreadCount(data.unread);
-      } catch (error) {
-        console.error("Failed to fetch unread count", error);
+      } catch (error: any) {
+        if (error?.response?.status !== 401) {
+          console.error("Failed to fetch unread count", error);
+        }
       }
     };
 
@@ -45,8 +47,10 @@ export function NotificationBell() {
         // Fetch recent 20 notifications
         const data = await api.get("api/notifications?limit=20").json<PaginatedResponse<NotificationOut>>();
         setNotifications(data.items);
-      } catch (error) {
-        console.error("Failed to fetch notifications", error);
+      } catch (error: any) {
+        if (error?.response?.status !== 401) {
+          console.error("Failed to fetch notifications", error);
+        }
       } finally {
         setIsLoading(false);
       }

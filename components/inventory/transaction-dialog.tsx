@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -64,12 +64,24 @@ export function TransactionDialog({
     },
   });
 
+  useEffect(() => {
+    if (item) {
+      form.reset({
+        direction: "IN",
+        quantity: 1,
+        note: "",
+      });
+    }
+  }, [item, form]);
+
   const onSubmit = async (values: FormValues) => {
     if (!item) return;
     
     // Prevent over-withdrawing
     if (values.direction === "OUT" && values.quantity > item.quantity) {
-      toast.error(`Cannot withdraw more than available stock (${item.quantity} ${item.unit || ""})`);
+      const msg = `Cannot withdraw more than available stock (${item.quantity} ${item.unit || ""})`;
+      form.setError("quantity", { type: "manual", message: msg });
+      toast.error(msg);
       return;
     }
 
@@ -83,8 +95,9 @@ export function TransactionDialog({
       });
       toast.success("Transaction recorded");
       onSuccess();
-    } catch (err) {
-      toast.error("Failed to record transaction");
+    } catch (err: any) {
+      const errorMsg = err?.response?.data?.detail || "Failed to record transaction";
+      toast.error(errorMsg);
     } finally {
       setIsSubmitting(false);
     }
@@ -111,7 +124,13 @@ export function TransactionDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Direction</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select 
+                      onValueChange={(val) => {
+                        field.onChange(val);
+                        form.clearErrors("quantity");
+                      }} 
+                      value={field.value}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue />
@@ -139,11 +158,18 @@ export function TransactionDialog({
                           type="number"
                           step="any"
                           min="0.01"
-                          {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                          placeholder="0"
+                          className="pr-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          value={field.value === 0 ? "" : field.value}
+                          onFocus={(e) => e.target.select()}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            field.onChange(val === "" ? 0 : parseFloat(val) || 0);
+                            form.clearErrors("quantity");
+                          }}
                         />
                         {item?.unit && (
-                          <div className="absolute right-3 top-2.5 text-xs text-muted-foreground">
+                          <div className="absolute right-3 top-2.5 text-xs text-muted-foreground pointer-events-none select-none">
                             {item.unit}
                           </div>
                         )}

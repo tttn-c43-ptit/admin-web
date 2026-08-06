@@ -1,7 +1,10 @@
 "use client";
 
-import { TaskOut } from "@/types";
+import { TaskOut, User } from "@/types";
 import { format } from "date-fns";
+import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
+import { apiClient as api } from "@/lib/api-client";
 import {
   Dialog,
   DialogContent,
@@ -19,7 +22,17 @@ interface TaskDetailsDialogProps {
 }
 
 export function TaskDetailsDialog({ task, open, onOpenChange }: TaskDetailsDialogProps) {
+  const { data: staffList } = useQuery<User[]>({
+    queryKey: queryKeys.staff(),
+    queryFn: () => api.get("api/staff").json(),
+    enabled: !!task,
+  });
+
   if (!task) return null;
+
+  const assigneeName = task.assignee_id 
+    ? staffList?.find((s) => s.id === task.assignee_id)?.full_name || `${task.assignee_id.substring(0, 8)}...`
+    : "Unassigned";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -53,6 +66,12 @@ export function TaskDetailsDialog({ task, open, onOpenChange }: TaskDetailsDialo
                 </div>
               </div>
               <div>
+                <h4 className="text-sm font-medium text-muted-foreground">Assignee</h4>
+                <p className="mt-1 text-sm font-medium text-primary">
+                  {assigneeName}
+                </p>
+              </div>
+              <div>
                 <h4 className="text-sm font-medium text-muted-foreground">Due Date</h4>
                 <p className="mt-1 text-sm">
                   {task.due_date ? format(new Date(task.due_date), "PPp") : "-"}
@@ -83,6 +102,7 @@ export function TaskDetailsDialog({ task, open, onOpenChange }: TaskDetailsDialo
                         src={img} 
                         alt={`Proof ${i + 1}`} 
                         fill 
+                        unoptimized
                         className="object-cover"
                       />
                     </div>

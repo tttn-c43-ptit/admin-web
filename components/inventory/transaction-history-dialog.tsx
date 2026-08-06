@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { apiClient as api } from "@/lib/api-client";
-import { InventoryItem, InventoryTransaction } from "@/types";
+import { InventoryItem, InventoryTransaction, PaginatedResponse } from "@/types";
 import { Loader2, TrendingUp, TrendingDown } from "lucide-react";
 import {
   Dialog,
@@ -21,12 +21,14 @@ export function TransactionHistoryDialog({
   item,
   onOpenChange,
 }: TransactionHistoryDialogProps) {
-  const { data: transactions, isLoading } = useQuery({
+  const { data: response, isLoading } = useQuery({
     queryKey: ["inventory", "transactions", item?.id],
     queryFn: () =>
-      api.get(`api/inventory/${item?.id}/transactions`).json<InventoryTransaction[]>(),
+      api.get(`api/inventory/${item?.id}/transactions`).json<PaginatedResponse<InventoryTransaction>>(),
     enabled: !!item,
   });
+
+  const transactions = response?.items || [];
 
   return (
     <Dialog open={!!item} onOpenChange={onOpenChange}>

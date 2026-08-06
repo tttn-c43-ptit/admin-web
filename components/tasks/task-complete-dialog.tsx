@@ -36,6 +36,7 @@ export function TaskCompleteDialog({
         json: { proof_images: images },
       });
       setImages([]);
+      onOpenChange(false);
       onSuccess();
     } catch (error) {
       console.error("Failed to complete task", error);

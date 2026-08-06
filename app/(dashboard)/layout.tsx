@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useState, useEffect } from "react";
 import { clearTokens, getAccessToken } from "@/lib/auth";
+import { apiClient as api } from "@/lib/api-client";
 import { getUserRole, type UserRole } from "@/lib/jwt";
 import { useRouter } from "next/navigation";
 import { TestScanDialog } from "@/components/dashboard/test-scan-dialog";
@@ -63,18 +64,12 @@ function useUser(): UserData | null {
       setUser({ id: "", email: "", full_name: "Loading...", role: jwtRole });
     }
     
-    // Fetch from backend to be sure
+    // Fetch from backend using apiClient to handle refresh/401 automatically
     const token = getAccessToken();
-    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
     if (token) {
-      fetch(`${API_URL}/api/auth/me`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
-      .then(res => res.json())
+      api.get("api/auth/me").json<any>()
       .then(data => {
-        if (data.role) {
+        if (data && data.role) {
           setUser({
             id: data.id,
             email: data.email,
@@ -83,7 +78,11 @@ function useUser(): UserData | null {
           });
         }
       })
-      .catch(err => console.error("Failed to fetch user", err));
+      .catch(err => {
+        if (err?.response?.status !== 401) {
+          console.error("Failed to fetch user", err);
+        }
+      });
     }
   }, []);
   return user;

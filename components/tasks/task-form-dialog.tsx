@@ -36,13 +36,14 @@ import { Plus, Loader2 } from "lucide-react";
 import { getUserRole } from "@/lib/jwt";
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
-import { GardenDetail, PaginatedResponse } from "@/types";
+import { GardenDetail, PaginatedResponse, User } from "@/types";
 
 const taskSchema = z.object({
   garden_id: z.string().uuid("Please select a garden"),
   type: z.enum(["WATER", "FERTILIZE", "SPRAY", "INSPECT", "HARVEST", "OTHER"]),
   description: z.string().max(5000).optional(),
   due_date: z.string().optional(),
+  assignee_id: z.string().optional(),
 });
 
 type TaskFormValues = z.infer<typeof taskSchema>;
@@ -81,6 +82,11 @@ export function TaskFormDialog({
     queryFn: () => api.get("api/gardens").json(),
     enabled: !gardenId,
   });
+
+  const { data: staffList } = useQuery<User[]>({
+    queryKey: queryKeys.staff(),
+    queryFn: () => api.get("api/staff").json(),
+  });
   
   const gardens = gardensResponse?.items || [];
 
@@ -93,6 +99,7 @@ export function TaskFormDialog({
       due_date: taskToEdit?.due_date
         ? new Date(taskToEdit.due_date).toISOString().slice(0, 16)
         : "",
+      assignee_id: taskToEdit?.assignee_id || "",
     },
   });
 
@@ -105,6 +112,7 @@ export function TaskFormDialog({
         due_date: taskToEdit?.due_date
           ? new Date(taskToEdit.due_date).toISOString().slice(0, 16)
           : "",
+        assignee_id: taskToEdit?.assignee_id || "",
       });
     }
   }, [open, taskToEdit, gardenId, form]);
@@ -112,9 +120,10 @@ export function TaskFormDialog({
   const onSubmit = async (data: TaskFormValues) => {
     setIsSubmitting(true);
     try {
-      const payload = {
+      const payload: any = {
         ...data,
         due_date: data.due_date ? new Date(data.due_date).toISOString() : undefined,
+        assignee_id: data.assignee_id || undefined,
       };
 
       if (taskToEdit) {
@@ -234,6 +243,34 @@ export function TaskFormDialog({
                   <FormControl>
                     <Input type="datetime-local" {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="assignee_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Assignee (Optional)</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value || ""}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select staff member">
+                          {field.value ? staffList?.find((s) => s.id === field.value)?.full_name : undefined}
+                        </SelectValue>
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="">Unassigned</SelectItem>
+                      {staffList?.map((staff) => (
+                        <SelectItem key={staff.id} value={staff.id}>
+                          {staff.full_name} {staff.email ? `(${staff.email})` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}

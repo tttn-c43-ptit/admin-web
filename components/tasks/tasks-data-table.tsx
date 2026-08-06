@@ -11,8 +11,11 @@ import { format } from "date-fns";
 import { Plus, MoreHorizontal, Play, CheckCircle2, ChevronLeft, ChevronRight, Edit2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { EditTaskDialog } from "@/components/tasks/edit-task-dialog";
-import { TaskOut, PaginatedResponse, TaskStatus } from "@/types";
+import { TaskOut, PaginatedResponse, TaskStatus, User } from "@/types";
+import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import { apiClient as api } from "@/lib/api-client";
+import { getUserRole } from "@/lib/jwt";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -31,11 +34,9 @@ import {
   DropdownMenuTrigger,
   DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
 import { TaskCompleteDialog } from "@/components/tasks/task-complete-dialog";
-import { getUserRole } from "@/lib/jwt";
-import { TaskFormDialog } from "@/components/tasks/task-form-dialog";
 import { TaskDetailsDialog } from "@/components/tasks/task-details-dialog";
+import { Badge } from "@/components/ui/badge";
 import { Eye } from "lucide-react";
 
 interface TasksDataTableProps {
@@ -56,6 +57,11 @@ export function TasksDataTable({ refreshTrigger = 0 }: TasksDataTableProps) {
   
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [taskToView, setTaskToView] = useState<TaskOut | null>(null);
+
+  const { data: staffList } = useQuery<User[]>({
+    queryKey: queryKeys.staff(),
+    queryFn: () => api.get("api/staff").json(),
+  });
 
   // Pagination and Filtering State
   const [pageIndex, setPageIndex] = useState(0);
@@ -137,6 +143,16 @@ export function TasksDataTable({ refreshTrigger = 0 }: TasksDataTableProps) {
       cell: ({ row }) => {
         const date = row.getValue("due_date") as string;
         return date ? format(new Date(date), "MMM d, yyyy HH:mm") : "-";
+      },
+    },
+    {
+      accessorKey: "assignee_id",
+      header: "Assignee",
+      cell: ({ row }) => {
+        const assigneeId = row.original.assignee_id;
+        if (!assigneeId) return <span className="text-muted-foreground italic text-xs">Unassigned</span>;
+        const staff = staffList?.find((s) => s.id === assigneeId);
+        return <span className="text-sm font-medium">{staff ? staff.full_name : `${assigneeId.substring(0, 8)}...`}</span>;
       },
     },
     {
@@ -331,26 +347,16 @@ export function TasksDataTable({ refreshTrigger = 0 }: TasksDataTableProps) {
       </div>
 
       <TaskCompleteDialog
-        open={!!taskToComplete}
-        onOpenChange={(open: boolean) => !open && setTaskToComplete(null)}
-        taskId={taskToComplete?.id}
+        open={isCompleteOpen}
+        onOpenChange={setIsCompleteOpen}
+        taskId={selectedTaskId || undefined}
         onSuccess={() => {
-          setTaskToComplete(null);
+          setIsCompleteOpen(false);
+          setSelectedTaskId(null);
+          toast.success("Task completed");
           fetchTasks();
         }}
       />
-
-      {role === "OWNER" && taskToEdit && (
-        <TaskFormDialog
-          open={!!taskToEdit}
-          onOpenChange={(open: boolean) => !open && setTaskToEdit(null)}
-          taskToEdit={taskToEdit}
-          onSuccess={() => {
-            setTaskToEdit(null);
-            fetchTasks();
-          }}
-        />
-      )}
 
       {taskToEdit && (
         <EditTaskDialog
