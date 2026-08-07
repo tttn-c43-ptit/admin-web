@@ -264,6 +264,11 @@ export default function PlantDetailPage() {
                                 src={displayUrl}
                                 alt="Care Log Leaf"
                                 className="h-28 w-28 rounded-md object-cover border bg-white cursor-pointer hover:opacity-90 transition-opacity"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.onerror = null;
+                                  target.src = "https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?auto=format&fit=crop&w=300&q=80";
+                                }}
                                 onClick={() => {
                                   setAiTargetLog(entry.log.id);
                                   setAiTargetImage(displayUrl);

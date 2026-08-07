@@ -83,7 +83,16 @@ export function AIDiagnosisDialog({
         <div className="space-y-5 pt-2">
           {/* Xem trước ảnh lá cận cảnh */}
           <div className="relative rounded-xl overflow-hidden border bg-emerald-950/5 aspect-video flex items-center justify-center group shadow-inner">
-            <img src={imageUrl} alt="Lá cây chẩn đoán" className="max-h-full w-auto object-contain transition-transform duration-300 group-hover:scale-105" />
+            <img
+              src={imageUrl}
+              alt="Lá cây chẩn đoán"
+              className="max-h-full w-auto object-contain transition-transform duration-300 group-hover:scale-105"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.onerror = null;
+                target.src = "https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?auto=format&fit=crop&w=600&q=80";
+              }}
+            />
             
             {isLoading && (
               <div className="absolute inset-0 bg-background/70 backdrop-blur-md flex flex-col items-center justify-center space-y-3">
