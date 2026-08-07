@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { apiClient as api } from "@/lib/api-client";
 import { DiagnoseResponse } from "@/types";
+import { formatImageUrl } from "@/lib/utils";
 
 import {
   Dialog,
@@ -38,10 +39,12 @@ export function AIDiagnosisDialog({
     setResult(null);
     setErrorStatus(null);
     try {
+      const targetUrl = imageUrl.replace("localhost:9000", "minio:9000");
+
       const res = await api.post("api/ai/diagnose", {
         json: {
           plant_log_id: plantLogId,
-          image_url: imageUrl,
+          image_url: targetUrl,
         },
       });
       const data = await res.json<DiagnoseResponse>();
@@ -59,19 +62,18 @@ export function AIDiagnosisDialog({
     }
   };
 
-  const handleOpenChange = (newOpen: boolean) => {
-    onOpenChange(newOpen);
-    if (newOpen && !result && !isLoading) {
+  useEffect(() => {
+    if (open && plantLogId && imageUrl) {
       handleDiagnose();
     }
-  };
+  }, [open, plantLogId, imageUrl]);
 
   const confidencePercent = result?.diagnosis.confidence
     ? (result.diagnosis.confidence * 100).toFixed(1)
     : null;
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[540px] max-h-[90vh] overflow-y-auto">
         <DialogHeader className="border-b pb-3">
           <DialogTitle className="flex items-center gap-2 text-emerald-800 text-lg">
@@ -84,7 +86,7 @@ export function AIDiagnosisDialog({
           {/* Xem trước ảnh lá cận cảnh */}
           <div className="relative rounded-xl overflow-hidden border bg-emerald-950/5 aspect-video flex items-center justify-center group shadow-inner">
             <img
-              src={imageUrl}
+              src={formatImageUrl(imageUrl)}
               alt="Lá cây chẩn đoán"
               className="max-h-full w-auto object-contain transition-transform duration-300 group-hover:scale-105"
               onError={(e) => {

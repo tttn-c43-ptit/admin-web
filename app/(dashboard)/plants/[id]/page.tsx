@@ -271,7 +271,7 @@ export default function PlantDetailPage() {
                                 }}
                                 onClick={() => {
                                   setAiTargetLog(entry.log.id);
-                                  setAiTargetImage(displayUrl);
+                                  setAiTargetImage(img);
                                   setAiDialogOpen(true);
                                 }}
                               />
@@ -281,7 +281,7 @@ export default function PlantDetailPage() {
                                 className="w-full h-7 text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-300 font-semibold gap-1"
                                 onClick={() => {
                                   setAiTargetLog(entry.log.id);
-                                  setAiTargetImage(displayUrl);
+                                  setAiTargetImage(img);
                                   setAiDialogOpen(true);
                                 }}
                               >

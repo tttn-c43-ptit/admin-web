@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import http from "http";
 
 export async function POST(req: Request) {
   try {
@@ -14,30 +15,59 @@ export async function POST(req: Request) {
 
     const fileBuffer = await req.arrayBuffer();
 
-    // Map Docker internal host "http://minio:9000" to "http://localhost:9000"
-    const targetUrl = uploadUrl.replace("http://minio:9000", "http://localhost:9000");
+    const targetUrlObj = new URL(uploadUrl);
+    // Extract exact Host signed in the presigned URL (e.g. "localhost:9000" or "minio:9000")
+    const signedHost = targetUrlObj.host;
 
-    // Forward the file PUT request to MinIO setting Host header to "minio:9000"
-    // so AWS S3 V4 presigned signature matches 100%!
-    const response = await fetch(targetUrl, {
-      method: "PUT",
-      headers: {
-        "Content-Type": contentType,
-        "Host": "minio:9000",
-      },
-      body: fileBuffer,
+    // Extract exact path and query without parsing to preserve S3 V4 Signature
+    const pathAndQuery = uploadUrl.substring(uploadUrl.indexOf("/", 8));
+
+    return new Promise<Response>((resolve) => {
+      const options = {
+        hostname: "localhost",
+        port: 9000,
+        path: pathAndQuery,
+        method: "PUT",
+        headers: {
+          "Content-Type": contentType,
+          "Host": signedHost,
+          "Content-Length": Buffer.byteLength(fileBuffer),
+        },
+      };
+
+      const reqProxy = http.request(options, (resProxy) => {
+        let body = "";
+        resProxy.on("data", (chunk) => {
+          body += chunk.toString();
+        });
+        resProxy.on("end", () => {
+          if (resProxy.statusCode && resProxy.statusCode >= 200 && resProxy.statusCode < 300) {
+            resolve(NextResponse.json({ success: true }));
+          } else {
+            console.error("Upload proxy error from MinIO:", body);
+            resolve(
+              NextResponse.json(
+                { error: `MinIO upload failed: ${resProxy.statusCode} ${resProxy.statusMessage}` },
+                { status: resProxy.statusCode || 500 }
+              )
+            );
+          }
+        });
+      });
+
+      reqProxy.on("error", (e) => {
+        console.error("Upload proxy internal error:", e);
+        resolve(
+          NextResponse.json(
+            { error: "Internal server error during upload proxy" },
+            { status: 500 }
+          )
+        );
+      });
+
+      reqProxy.write(Buffer.from(fileBuffer));
+      reqProxy.end();
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Upload proxy error from MinIO:", errorText);
-      return NextResponse.json(
-        { error: `MinIO upload failed: ${response.status} ${response.statusText}` },
-        { status: response.status }
-      );
-    }
-
-    return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Upload proxy internal error:", error);
     return NextResponse.json(

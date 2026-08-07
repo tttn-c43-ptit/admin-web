@@ -64,9 +64,9 @@ export function ImageUploader({
             throw new Error(errData?.error || `Failed to upload ${file.name}`);
           }
 
-          // 3. Save object URL formatted for browser
-          const objectUrl = formatImageUrl(presignRes.object_url);
-          newUrls.push(objectUrl);
+          // 3. Save canonical minio:9000 object URL expected by Backend
+          const canonicalUrl = presignRes.object_url.replace("localhost:9000", "minio:9000");
+          newUrls.push(canonicalUrl);
         }
         onChange(newUrls);
         toast.success("Image uploaded successfully");
