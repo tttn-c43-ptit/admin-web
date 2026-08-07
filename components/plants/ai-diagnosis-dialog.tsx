@@ -11,7 +11,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, Sparkles, AlertTriangle, ShieldCheck } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, Sparkles, AlertTriangle, ShieldCheck, Cpu, Stethoscope, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface AIDiagnosisDialogProps {
@@ -32,6 +33,7 @@ export function AIDiagnosisDialog({
   const [errorStatus, setErrorStatus] = useState<number | null>(null);
 
   const handleDiagnose = async () => {
+    if (!plantLogId || !imageUrl) return;
     setIsLoading(true);
     setResult(null);
     setErrorStatus(null);
@@ -48,109 +50,135 @@ export function AIDiagnosisDialog({
       const err = error as { response?: { status?: number } };
       if (err?.response?.status === 429) {
         setErrorStatus(429);
-        toast.error("Too many AI requests. Please try again later.");
+        toast.error("Hệ thống AI đang quá tải. Vui lòng thử lại sau giây lát.");
       } else {
-        toast.error("Failed to run AI diagnosis");
+        toast.error("Không thể chẩn đoán ảnh bằng AI. Vui lòng kiểm tra lại đường dẫn ảnh.");
       }
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Run automatically when dialog opens if we don't have a result yet
-  useState(() => {
-    if (open && !result && !isLoading && !errorStatus) {
-      handleDiagnose();
-    }
-  });
-
-  // Also trigger when opened from closed state
   const handleOpenChange = (newOpen: boolean) => {
     onOpenChange(newOpen);
-    if (newOpen && !result) {
+    if (newOpen && !result && !isLoading) {
       handleDiagnose();
     }
   };
 
+  const confidencePercent = result?.diagnosis.confidence
+    ? (result.diagnosis.confidence * 100).toFixed(1)
+    : null;
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-primary">
-            <Sparkles className="h-5 w-5 text-indigo-500" />
-            AI Diagnosis
+      <DialogContent className="sm:max-w-[540px] max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="border-b pb-3">
+          <DialogTitle className="flex items-center gap-2 text-emerald-800 text-lg">
+            <Sparkles className="h-5 w-5 text-emerald-600 animate-pulse" />
+            AI Chẩn Đoán Bệnh Lá Cây (Vision Model)
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <div className="relative rounded-lg overflow-hidden border bg-muted aspect-video flex items-center justify-center">
-            <img src={imageUrl} alt="Subject" className="max-h-full object-contain" />
+        <div className="space-y-5 pt-2">
+          {/* Xem trước ảnh lá cận cảnh */}
+          <div className="relative rounded-xl overflow-hidden border bg-emerald-950/5 aspect-video flex items-center justify-center group shadow-inner">
+            <img src={imageUrl} alt="Lá cây chẩn đoán" className="max-h-full w-auto object-contain transition-transform duration-300 group-hover:scale-105" />
             
             {isLoading && (
-              <div className="absolute inset-0 bg-background/60 backdrop-blur-sm flex flex-col items-center justify-center">
+              <div className="absolute inset-0 bg-background/70 backdrop-blur-md flex flex-col items-center justify-center space-y-3">
                 <div className="relative">
-                  <div className="absolute inset-0 animate-ping rounded-full bg-indigo-500 opacity-20"></div>
-                  <Loader2 className="h-10 w-10 animate-spin text-indigo-600 relative z-10" />
+                  <div className="absolute -inset-2 animate-ping rounded-full bg-emerald-500 opacity-25"></div>
+                  <Loader2 className="h-10 w-10 animate-spin text-emerald-600 relative z-10" />
                 </div>
-                <p className="mt-4 font-medium text-indigo-700 animate-pulse">Analyzing visual features...</p>
+                <p className="font-semibold text-emerald-800 animate-pulse text-sm">
+                  Đang phân tích đặc trưng hình ảnh lá cây...
+                </p>
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Cpu className="h-3.5 w-3.5" /> Model: ResNet-50 / Hugging Face Local
+                </div>
               </div>
             )}
           </div>
 
+          {/* Xử lý Rate Limit 429 */}
           {errorStatus === 429 && !isLoading && (
-            <div className="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-lg flex gap-3 items-start">
+            <div className="bg-amber-50 border border-amber-200 text-amber-900 p-4 rounded-xl flex gap-3 items-start">
               <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5 text-amber-600" />
               <div>
-                <h4 className="font-semibold text-amber-900">Rate Limit Exceeded</h4>
-                <p className="text-sm mt-1">Our AI service is currently receiving too many requests. Please wait a moment and try again.</p>
-                <Button variant="outline" size="sm" className="mt-3 bg-white" onClick={handleDiagnose}>
-                  Try Again
+                <h4 className="font-semibold text-amber-900">Vượt quá giới hạn lượt gọi AI</h4>
+                <p className="text-sm mt-1 text-amber-800">
+                  Hệ thống tạm thời giới hạn số lượt gửi chẩn đoán trong khoảng thời gian ngắn để tránh quá tải.
+                </p>
+                <Button variant="outline" size="sm" className="mt-3 bg-white hover:bg-amber-100 border-amber-300" onClick={handleDiagnose}>
+                  Thử lại ngay
                 </Button>
               </div>
             </div>
           )}
 
+          {/* Kết quả Chẩn đoán AI */}
           {result && !isLoading && (
-            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <div className="bg-white border rounded-xl shadow-sm overflow-hidden">
-                <div className="p-4 border-b bg-muted/30">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Detected Condition</h4>
-                    <Badge variant={result.diagnosis.disease === "Healthy" ? "default" : "destructive"}>
-                      {result.diagnosis.model_name}
-                    </Badge>
-                  </div>
-                  <p className="text-xl font-bold">{result.diagnosis.disease || "Unknown"}</p>
-                </div>
+            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-3 duration-500">
+              <div className="bg-gradient-to-br from-emerald-50/50 via-white to-teal-50/30 border border-emerald-200/80 rounded-2xl shadow-sm overflow-hidden">
                 
+                {/* Header kết quả: Tên bệnh & Model */}
+                <div className="p-4 border-b border-emerald-100 bg-emerald-900/5 flex items-start justify-between gap-3">
+                  <div>
+                    <span className="text-xs font-semibold text-emerald-700 uppercase tracking-wider block mb-1">
+                      Loại bệnh phát hiện (Detected Condition)
+                    </span>
+                    <h3 className="text-xl font-extrabold text-emerald-950 tracking-tight">
+                      {result.diagnosis.disease || "Không phát hiện triệu chứng bệnh (Khỏe mạnh)"}
+                    </h3>
+                  </div>
+                  <Badge variant="outline" className="bg-emerald-100/80 text-emerald-800 border-emerald-300 gap-1 text-xs shrink-0 font-mono">
+                    <Cpu className="h-3 w-3" />
+                    {result.diagnosis.model_name || "ResNet-50 Local"}
+                  </Badge>
+                </div>
+
                 <div className="p-4 space-y-4">
-                  {result.diagnosis.confidence !== null && (
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Confidence Score</span>
-                        <span className="font-medium">{(result.diagnosis.confidence * 100).toFixed(1)}%</span>
+                  {/* Độ tin cậy (Confidence Score %) */}
+                  {confidencePercent !== null && (
+                    <div className="space-y-2 bg-white/80 p-3 rounded-xl border border-emerald-100">
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-muted-foreground font-medium flex items-center gap-1.5">
+                          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                          Độ tin cậy của AI (Confidence Score)
+                        </span>
+                        <span className="font-bold text-emerald-700 font-mono text-base">
+                          {confidencePercent}%
+                        </span>
                       </div>
-                      <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-primary transition-all" 
-                          style={{ width: `${result.diagnosis.confidence * 100}%` }}
+                      <div className="h-2.5 w-full bg-emerald-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-emerald-500 to-teal-600 transition-all duration-700 rounded-full"
+                          style={{ width: `${confidencePercent}%` }}
                         />
                       </div>
                     </div>
                   )}
 
+                  {/* Gợi ý xử lý / Đề xuất chăm sóc & Thuốc */}
                   {result.diagnosis.suggestion && (
-                    <div>
-                      <h4 className="text-sm font-semibold text-muted-foreground mb-1">Recommended Action</h4>
-                      <p className="text-sm leading-relaxed">{result.diagnosis.suggestion}</p>
+                    <div className="space-y-1.5 bg-emerald-50/60 p-3.5 rounded-xl border border-emerald-200/60">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-800 flex items-center gap-1.5">
+                        <Stethoscope className="h-4 w-4 text-emerald-700" />
+                        Gợi ý xử lý & Biện pháp chăm sóc
+                      </h4>
+                      <p className="text-sm text-emerald-950 leading-relaxed font-medium">
+                        {result.diagnosis.suggestion}
+                      </p>
                     </div>
                   )}
                 </div>
               </div>
 
-              <div className="bg-blue-50 border border-blue-100 p-3 rounded-lg flex gap-3 text-blue-800 text-xs">
-                <ShieldCheck className="h-4 w-4 shrink-0 text-blue-600" />
-                <p>{result.disclaimer}</p>
+              {/* Disclaimer Cảnh báo chuyên môn */}
+              <div className="bg-blue-50/80 border border-blue-200/80 p-3.5 rounded-xl flex gap-3 text-blue-900 text-xs">
+                <ShieldCheck className="h-4 w-4 shrink-0 text-blue-600 mt-0.5" />
+                <p className="leading-relaxed">{result.disclaimer}</p>
               </div>
             </div>
           )}
@@ -158,14 +186,4 @@ export function AIDiagnosisDialog({
       </DialogContent>
     </Dialog>
   );
-}
-
-// Inline Badge component to avoid another import
-function Badge({ children, variant = "default" }: { children: React.ReactNode, variant?: "default" | "destructive" }) {
-  const base = "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2";
-  const variants = {
-    default: "border-transparent bg-primary text-primary-foreground hover:bg-primary/80",
-    destructive: "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
-  };
-  return <div className={`${base} ${variants[variant]}`}>{children}</div>;
 }

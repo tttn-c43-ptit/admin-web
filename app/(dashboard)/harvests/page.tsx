@@ -21,10 +21,20 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
-import { Plus, Tractor, Loader2 } from "lucide-react";
+import { Plus, Tractor, Loader2, Pencil, Trash2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { HarvestFormDialog } from "@/components/harvests/harvest-form-dialog";
 import { ResponsiveContainer, Tooltip as RechartsTooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
+import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default function HarvestsPage() {
   const queryClient = useQueryClient();
@@ -35,10 +45,62 @@ export default function HarvestsPage() {
   
   const [formOpen, setFormOpen] = useState(false);
 
+  // Edit Harvest State
+  const [editingHarvest, setEditingHarvest] = useState<Harvest | null>(null);
+  const [editQuantityKg, setEditQuantityKg] = useState<number>(0);
+  const [editQuality, setEditQuality] = useState<string>("");
+  const [editSeason, setEditSeason] = useState<string>("");
+  const [isUpdating, setIsUpdating] = useState(false);
+
   const handleGardenChange = (newGardenId: string) => {
     setGardenId(newGardenId);
     setSelectedPlantId("");
     setPageIndex(0);
+  };
+
+  // Open Edit Harvest Dialog
+  const handleOpenEdit = (harvest: Harvest) => {
+    setEditingHarvest(harvest);
+    setEditQuantityKg(harvest.quantity_kg);
+    setEditQuality(harvest.quality || "");
+    setEditSeason(harvest.season || "");
+  };
+
+  // Submit Edit Harvest (PATCH /api/harvests/{id})
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingHarvest) return;
+    setIsUpdating(true);
+    try {
+      await api.patch(`api/harvests/${editingHarvest.id}`, {
+        json: {
+          quantity_kg: editQuantityKg,
+          quality: editQuality || null,
+          season: editSeason || null,
+        },
+      });
+      toast.success("Harvest record updated successfully");
+      setEditingHarvest(null);
+      queryClient.invalidateQueries({ queryKey: ["harvests"] });
+      refetch();
+    } catch (err) {
+      toast.error("Failed to update harvest record");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // Delete Harvest (DELETE /api/harvests/{id})
+  const handleDeleteHarvest = async (harvestId: string) => {
+    if (!confirm("Are you sure you want to delete this harvest record? This will reduce the garden yield totals.")) return;
+    try {
+      await api.delete(`api/harvests/${harvestId}`);
+      toast.success("Harvest record deleted");
+      queryClient.invalidateQueries({ queryKey: ["harvests"] });
+      refetch();
+    } catch (err) {
+      toast.error("Failed to delete harvest record");
+    }
   };
 
   // Fetch plants for the selected garden
@@ -124,7 +186,32 @@ export default function HarvestsPage() {
           {getPlantCode(row.original.plant_id)}
         </div>
       ),
-    }
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleOpenEdit(row.original)}
+            title="Edit Harvest Record"
+          >
+            <Pencil className="h-4 w-4 text-gray-600" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleDeleteHarvest(row.original.id)}
+            title="Delete Harvest Record"
+            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      ),
+    },
   ];
 
   const table = useReactTable({
@@ -336,6 +423,58 @@ export default function HarvestsPage() {
           }}
         />
       )}
+
+      {/* Edit Harvest Dialog */}
+      <Dialog open={!!editingHarvest} onOpenChange={(open) => !open && setEditingHarvest(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Harvest Record</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEditSubmit} className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="edit_quantity_kg">Yield Quantity (kg)</Label>
+              <Input
+                id="edit_quantity_kg"
+                type="number"
+                step="0.1"
+                min="0.1"
+                value={editQuantityKg || ""}
+                onChange={(e) => setEditQuantityKg(parseFloat(e.target.value) || 0)}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit_quality">Quality Grade (Optional)</Label>
+              <Input
+                id="edit_quality"
+                placeholder="e.g. Grade A, Premium..."
+                value={editQuality}
+                onChange={(e) => setEditQuality(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit_season">Season (Optional)</Label>
+              <Input
+                id="edit_season"
+                placeholder="e.g. Summer 2026, Main Harvest..."
+                value={editSeason}
+                onChange={(e) => setEditSeason(e.target.value)}
+              />
+            </div>
+
+            <DialogFooter className="pt-2">
+              <Button type="button" variant="outline" onClick={() => setEditingHarvest(null)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isUpdating}>
+                {isUpdating ? "Saving..." : "Save Changes"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
