@@ -39,7 +39,7 @@ export function AiSummaryCard({ gardenId }: AiSummaryCardProps) {
         </h3>
       </div>
       
-      <div className="p-6 flex-1 flex flex-col gap-4">
+      <div className="p-6 flex-1 flex flex-col gap-4 overflow-y-auto max-h-[520px]">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium">Analyze last</span>
           <Input 
@@ -84,7 +84,7 @@ export function AiSummaryCard({ gardenId }: AiSummaryCardProps) {
         {mutation.data && (
           <div className="flex-1 flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-2">
             <div className="text-sm text-foreground leading-relaxed p-4 bg-muted/50 rounded-lg whitespace-pre-wrap">
-              {mutation.data.summary}
+              {mutation.data.summary.replace(/^Vườn\s+Vườn\s+/i, "Vườn ")}
             </div>
             
             {mutation.data.highlights.length > 0 && (

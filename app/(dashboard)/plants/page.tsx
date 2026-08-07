@@ -28,13 +28,13 @@ export default function PlantsPage() {
         <h1 className="text-2xl font-semibold tracking-tight">Plants Management</h1>
         
         <div className="flex items-center space-x-2">
-          <span className="text-sm font-medium">Select Garden:</span>
+          <span className="text-sm font-medium whitespace-nowrap">Select Garden:</span>
           <Select
             value={selectedGardenId}
             onValueChange={(val) => val && setSelectedGardenId(val)}
             disabled={isLoadingGardens || !gardensData?.items.length}
           >
-            <SelectTrigger className="w-[200px]">
+            <SelectTrigger className="w-[280px] sm:w-[320px] max-w-full">
               <SelectValue placeholder="Select a garden">
                 {gardensData?.items.find((g) => g.id === selectedGardenId)?.name}
               </SelectValue>

@@ -82,7 +82,7 @@ export function TasksDataTable({ refreshTrigger = 0 }: TasksDataTableProps) {
     try {
       let url = `api/tasks?limit=${pageSize}&offset=${pageIndex * pageSize}`;
       if (statusFilter !== "ALL") {
-        url += `&task_status=${statusFilter}`;
+        url += `&status=${statusFilter}`;
       }
       const response = await api.get(url).json<PaginatedResponse<TaskOut>>();
       setData(response.items);
