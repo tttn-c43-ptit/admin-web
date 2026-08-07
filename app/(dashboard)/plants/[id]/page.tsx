@@ -81,6 +81,11 @@ export default function PlantDetailPage() {
     queryFn: () => api.get(`api/plants/${plantId}/timeline?limit=50&offset=0`).json(),
   });
 
+  const formatImageUrl = (url: string) => {
+    if (!url) return "";
+    return url.replace("http://minio:9000", "http://localhost:9000");
+  };
+
   const handleDeletePlant = async () => {
     setIsDeleting(true);
     try {
@@ -250,27 +255,37 @@ export default function PlantDetailPage() {
                     </div>
                     {entry.log.note && <p className="text-sm text-muted-foreground">{entry.log.note}</p>}
                     {entry.log.images && entry.log.images.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {entry.log.images.map((img, i) => (
-                          <div key={i} className="group relative">
-                            <img src={img} alt="Log" className="h-24 w-24 rounded-md object-cover border" />
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-md flex items-center justify-center backdrop-blur-[1px]">
-                              <Button 
-                                size="sm" 
-                                variant="secondary" 
-                                className="h-7 text-xs bg-white/90 hover:bg-white text-indigo-700"
+                      <div className="flex flex-wrap gap-3 mt-3">
+                        {entry.log.images.map((img, i) => {
+                          const displayUrl = formatImageUrl(img);
+                          return (
+                            <div key={i} className="flex flex-col items-start gap-1.5 bg-muted/30 p-1.5 rounded-lg border">
+                              <img
+                                src={displayUrl}
+                                alt="Care Log Leaf"
+                                className="h-28 w-28 rounded-md object-cover border bg-white cursor-pointer hover:opacity-90 transition-opacity"
                                 onClick={() => {
                                   setAiTargetLog(entry.log.id);
-                                  setAiTargetImage(img);
+                                  setAiTargetImage(displayUrl);
+                                  setAiDialogOpen(true);
+                                }}
+                              />
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="w-full h-7 text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-300 font-semibold gap-1"
+                                onClick={() => {
+                                  setAiTargetLog(entry.log.id);
+                                  setAiTargetImage(displayUrl);
                                   setAiDialogOpen(true);
                                 }}
                               >
-                                <Sparkles className="mr-1 h-3 w-3" />
-                                AI
+                                <Sparkles className="h-3 w-3 text-emerald-600 animate-pulse" />
+                                AI Chẩn đoán
                               </Button>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                     <div className="text-xs text-muted-foreground pt-1">Reporter: {entry.reporter_name}</div>

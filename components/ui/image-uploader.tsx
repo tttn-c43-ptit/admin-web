@@ -9,6 +9,8 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button } from "./button";
 
+import { formatImageUrl } from "@/lib/utils";
+
 interface ImageUploaderProps {
   value: string[];
   onChange: (urls: string[]) => void;
@@ -36,7 +38,7 @@ export function ImageUploader({
 
       try {
         for (const file of acceptedFiles) {
-          // 1. Get presigned URL
+          // 1. Get presigned URL from Backend
           const presignRes: PresignResult = await api
             .post("api/uploads/presign", {
               json: {
@@ -46,25 +48,28 @@ export function ImageUploader({
             })
             .json();
 
-          // 2. Upload file directly to MinIO/S3
-          const uploadResponse = await fetch(presignRes.upload_url, {
-            method: "PUT",
+          // 2. Upload file through Next.js proxy route to preserve MinIO presigned signature
+          const uploadResponse = await fetch("/api/upload-proxy", {
+            method: "POST",
             headers: {
               "Content-Type": file.type,
+              "x-upload-url": presignRes.upload_url,
             },
             body: file,
           });
 
           if (!uploadResponse.ok) {
-            const errText = await uploadResponse.text();
-            console.error("MinIO error:", errText);
-            throw new Error(`Failed to upload ${file.name}: ${uploadResponse.status} ${uploadResponse.statusText}`);
+            const errData = await uploadResponse.json().catch(() => null);
+            console.error("Upload proxy error:", errData);
+            throw new Error(errData?.error || `Failed to upload ${file.name}`);
           }
 
-          // 3. Save object URL
-          newUrls.push(presignRes.object_url);
+          // 3. Save object URL formatted for browser
+          const objectUrl = formatImageUrl(presignRes.object_url);
+          newUrls.push(objectUrl);
         }
         onChange(newUrls);
+        toast.success("Image uploaded successfully");
       } catch (error: unknown) {
         console.error("Upload error:", error);
         toast.error(error instanceof Error ? error.message : "An error occurred during upload.");
@@ -102,8 +107,8 @@ export function ImageUploader({
         <input {...getInputProps()} />
         {isUploading ? (
           <div className="flex flex-col items-center text-muted-foreground">
-            <Loader2 className="h-8 w-8 animate-spin mb-2" />
-            <p className="text-sm font-medium">Uploading images...</p>
+            <Loader2 className="h-8 w-8 animate-spin mb-2 text-primary" />
+            <p className="text-sm font-medium">Uploading image to storage...</p>
           </div>
         ) : (
           <div className="flex flex-col items-center text-muted-foreground">
@@ -125,7 +130,7 @@ export function ImageUploader({
           {value.map((url, idx) => (
             <div key={idx} className="relative group rounded-md overflow-hidden border">
               <img
-                src={url}
+                src={formatImageUrl(url)}
                 alt={`Uploaded ${idx + 1}`}
                 className="w-full h-24 object-cover"
               />

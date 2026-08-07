@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatImageUrl } from "@/lib/utils";
 
 interface ImageComparisonDialogProps {
   open: boolean;
@@ -37,7 +37,7 @@ export function ImageComparisonDialog({
   const allImages = timeline.flatMap((entry) =>
     (entry.log.images || []).map((imgUrl, idx) => ({
       id: `${entry.log.id}-${idx}`,
-      url: imgUrl,
+      url: formatImageUrl(imgUrl),
       date: entry.log.created_at,
       status: entry.log.status,
     }))

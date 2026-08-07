@@ -13,3 +13,8 @@ export function formatDate(dateString: string) {
     year: "numeric",
   });
 }
+
+export function formatImageUrl(url: string | null | undefined): string {
+  if (!url) return "";
+  return url.replace("http://minio:9000", "http://localhost:9000");
+}
