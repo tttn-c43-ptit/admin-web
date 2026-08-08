@@ -1,9 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient as api } from "@/lib/api-client";
 import { queryKeys } from "@/lib/query-keys";
-import { GardenDetail, GardenBoundary } from "@/types";
+import { GardenDetail, GardenBoundary, Zone, Plant } from "@/types";
 import { useParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -12,6 +13,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ZonesPanel } from "./zones-panel";
 import { SchedulesPanel } from "@/components/schedules/schedules-panel";
+import { VirtualZoneGrid } from "@/components/gardens/virtual-zone-grid";
 import { useTranslation } from "@/components/i18n-provider";
 
 // Load GardenMap dynamically to avoid SSR issues with Leaflet
@@ -34,9 +36,21 @@ export default function GardenDetailPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
 
+  const [activeZoneId, setActiveZoneId] = useState<string | null>(null);
+
   const { data: garden, isLoading } = useQuery<GardenDetail>({
     queryKey: queryKeys.gardenDetail(id),
     queryFn: () => api.get(`api/gardens/${id}`).json(),
+  });
+
+  const { data: zones } = useQuery<Zone[]>({
+    queryKey: queryKeys.zones(id),
+    queryFn: () => api.get(`api/gardens/${id}/zones`).json(),
+  });
+
+  const { data: plantsData } = useQuery<{ items: Plant[] }>({
+    queryKey: ["plants_grid", id],
+    queryFn: () => api.get(`api/gardens/${id}/plants?limit=500`).json(),
   });
 
   const updateBoundaryMutation = useMutation({
@@ -46,6 +60,31 @@ export default function GardenDetailPage() {
       // Invalidate both detail and list to update area_m2 everywhere
       queryClient.setQueryData(queryKeys.gardenDetail(id), data);
       queryClient.invalidateQueries({ queryKey: queryKeys.gardens() });
+    },
+  });
+
+  const deleteZoneMutation = useMutation({
+    mutationFn: async (zoneId: string) => {
+      await api.delete(`api/zones/${zoneId}`);
+      return zoneId;
+    },
+    onSuccess: (deletedZoneId) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.zones(id) });
+      queryClient.invalidateQueries({ queryKey: ["plants_grid", id] });
+      setActiveZoneId(null);
+
+      // Clean up localStorage boundary data for deleted zone
+      const storageKey = `zone_boundaries_${id}`;
+      try {
+        const raw = localStorage.getItem(storageKey);
+        if (raw) {
+          const data = JSON.parse(raw);
+          delete data[deletedZoneId];
+          localStorage.setItem(storageKey, JSON.stringify(data));
+        }
+      } catch (e) {
+        console.error("Storage error:", e);
+      }
     },
   });
 
@@ -69,7 +108,8 @@ export default function GardenDetailPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      {/* Header Bar */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Link href="/gardens" className={buttonVariants({ variant: "ghost", size: "icon" })}>
@@ -83,10 +123,9 @@ export default function GardenDetailPage() {
             </p>
           </div>
         </div>
-        <div className="flex items-center space-x-2">
-        </div>
       </div>
 
+      {/* Boundary Map & Side Panels */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between">
@@ -96,9 +135,14 @@ export default function GardenDetailPage() {
             </p>
           </div>
           <GardenMap
+            gardenId={id}
             initialBoundary={garden.boundary}
             onSave={(boundary) => updateBoundaryMutation.mutate(boundary)}
             isSaving={updateBoundaryMutation.isPending}
+            zones={zones}
+            plants={plantsData?.items}
+            activeZoneId={activeZoneId}
+            onDeleteZone={(zId) => deleteZoneMutation.mutate(zId)}
           />
         </div>
 
@@ -109,13 +153,22 @@ export default function GardenDetailPage() {
               <TabsTrigger value="schedules">{t("gardenDetail.tabSchedules")}</TabsTrigger>
             </TabsList>
             <TabsContent value="zones" className="mt-4">
-              <ZonesPanel gardenId={id} />
+              <ZonesPanel
+                gardenId={id}
+                activeZoneId={activeZoneId}
+                onSelectZone={(zoneId) => setActiveZoneId(zoneId)}
+              />
             </TabsContent>
             <TabsContent value="schedules" className="mt-4">
               <SchedulesPanel gardenId={id} />
             </TabsContent>
           </Tabs>
         </div>
+      </div>
+
+      {/* Virtual Garden Grid Section */}
+      <div className="pt-4">
+        <VirtualZoneGrid gardenId={id} zones={zones} />
       </div>
     </div>
   );

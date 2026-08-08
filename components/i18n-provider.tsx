@@ -6,7 +6,7 @@ import { Language, TranslationKey, translations } from "@/lib/i18n/translations"
 interface LanguageContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
-  t: (key: TranslationKey, fallback?: string) => string;
+  t: (key: TranslationKey, params?: Record<string, string | number> | string, fallback?: string) => string;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -39,9 +39,16 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const t = (key: TranslationKey, fallback?: string): string => {
+  const t = (key: TranslationKey, params?: Record<string, string | number> | string, fallback?: string): string => {
     const langDict = translations[language] || translations.en;
-    return langDict[key] || fallback || key;
+    const raw: string = (langDict as Record<string, string>)[key] || (typeof params === "string" ? params : fallback) || key;
+    let str = raw;
+    if (params && typeof params === "object") {
+      Object.entries(params).forEach(([k, v]) => {
+        str = str.replace(new RegExp(`\\{${k}\\}`, "g"), String(v));
+      });
+    }
+    return str;
   };
 
   return (
