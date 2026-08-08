@@ -13,8 +13,10 @@ import { Badge } from "@/components/ui/badge";
 import { apiClient as api } from "@/lib/api-client";
 import { getAccessToken } from "@/lib/auth";
 import { NotificationOut, PaginatedResponse, UnreadCount } from "@/types";
+import { useTranslation } from "@/components/i18n-provider";
 
 export function NotificationBell() {
+  const { t, language } = useTranslation();
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState<NotificationOut[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -59,7 +61,7 @@ export function NotificationBell() {
     if (isOpen) {
       fetchNotifications();
     }
-  }, [isOpen]);;
+  }, [isOpen]);
 
   const handleMarkAsRead = async (id: string) => {
     try {
@@ -100,7 +102,7 @@ export function NotificationBell() {
       } />
       <PopoverContent className="w-80 p-0" align="end">
         <div className="flex items-center justify-between px-4 py-3 border-b">
-          <span className="font-semibold">Notifications</span>
+          <span className="font-semibold">{t("notif.title")}</span>
           {unreadCount > 0 && (
             <Button
               variant="ghost"
@@ -108,7 +110,7 @@ export function NotificationBell() {
               className="text-xs h-auto py-1 px-2"
               onClick={handleMarkAllAsRead}
             >
-              Mark all as read
+              {t("notif.markAllRead")}
             </Button>
           )}
         </div>
@@ -119,7 +121,7 @@ export function NotificationBell() {
             </div>
           ) : notifications.length === 0 ? (
             <div className="p-8 text-center text-sm text-muted-foreground">
-              No notifications yet.
+              {t("notif.noNotifications")}
             </div>
           ) : (
             <div className="flex flex-col">
@@ -144,7 +146,9 @@ export function NotificationBell() {
                       </p>
                     )}
                     <p className="text-[10px] text-muted-foreground pt-1">
-                      {new Date(notification.created_at).toLocaleString()}
+                      {new Date(notification.created_at).toLocaleString(
+                        language === "vi" ? "vi-VN" : "en-US"
+                      )}
                     </p>
                   </div>
                   {!notification.is_read && (
@@ -153,7 +157,7 @@ export function NotificationBell() {
                       size="icon"
                       className="h-6 w-6 shrink-0"
                       onClick={() => handleMarkAsRead(notification.id)}
-                      title="Mark as read"
+                      title={t("notif.markRead")}
                     >
                       <Check className="h-4 w-4" />
                     </Button>

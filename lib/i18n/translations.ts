@@ -180,6 +180,12 @@ export const translations = {
     "grid.redoSuccess": "Redid action (Ctrl+Y)",
     "map.undoZoneEdit": "Undid zone layout edit (Ctrl+Z)",
 
+    // Notifications
+    "notif.title": "Notifications",
+    "notif.markAllRead": "Mark all as read",
+    "notif.markRead": "Mark as read",
+    "notif.noNotifications": "No notifications yet.",
+
     // Garden Map
     "map.searchPlaceholder": "Search location (e.g., Cu Chi, Da Lat...)",
     "map.searchFound": "Found location:",
@@ -794,6 +800,12 @@ export const translations = {
     "grid.undoSuccess": "Đã hoàn tác thao tác vừa rồi (Ctrl+Z)",
     "grid.redoSuccess": "Đã làm lại thao tác vừa rồi (Ctrl+Y)",
     "map.undoZoneEdit": "Đã hoàn tác chỉnh sửa ranh giới phân khu (Ctrl+Z)",
+
+    // Notifications
+    "notif.title": "Thông báo",
+    "notif.markAllRead": "Đánh dấu đã đọc tất cả",
+    "notif.markRead": "Đánh dấu đã đọc",
+    "notif.noNotifications": "Chưa có thông báo nào.",
 
     // Garden Map
     "map.searchPlaceholder": "Tìm vị trí địa lý (Ví dụ: Củ Chi, Đà Lạt...)",
