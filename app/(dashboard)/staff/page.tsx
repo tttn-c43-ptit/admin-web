@@ -16,7 +16,7 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Plus, X, Pencil, UserX, UserCheck, ShieldCheck, ShieldAlert } from "lucide-react";
+import { Plus, X, Pencil, UserX, UserCheck, ShieldCheck, ShieldAlert, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 
 interface StaffUser {
@@ -57,6 +57,12 @@ const editStaffSchema = z.object({
 
 type EditStaffFormValues = z.infer<typeof editStaffSchema>;
 
+const resetPasswordSchema = z.object({
+  password: z.string().min(8, "Password must be at least 8 characters"),
+});
+
+type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;
+
 export default function StaffPage() {
   const [staffList, setStaffList] = useState<StaffUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -66,6 +72,9 @@ export default function StaffPage() {
 
   // Edit Staff Dialog State
   const [editingStaff, setEditingStaff] = useState<StaffUser | null>(null);
+
+  // Reset Password Dialog State
+  const [resettingStaff, setResettingStaff] = useState<StaffUser | null>(null);
 
   const form = useForm<StaffFormValues>({
     resolver: zodResolver(staffSchema),
@@ -82,6 +91,13 @@ export default function StaffPage() {
     defaultValues: {
       full_name: "",
       phone: "",
+    },
+  });
+
+  const resetPasswordForm = useForm<ResetPasswordFormValues>({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: {
+      password: "",
     },
   });
 
@@ -150,6 +166,29 @@ export default function StaffPage() {
       fetchStaff();
     } catch (err) {
       toast.error("Failed to update staff details");
+    }
+  };
+
+  // Open Reset Password Dialog
+  const handleOpenResetPassword = (staff: StaffUser) => {
+    setResettingStaff(staff);
+    resetPasswordForm.reset({ password: "" });
+  };
+
+  // Submit Reset Password (PATCH /api/staff/{id})
+  const onResetPasswordSubmit = async (values: ResetPasswordFormValues) => {
+    if (!resettingStaff) return;
+    try {
+      await api.patch(`api/staff/${resettingStaff.id}`, {
+        json: {
+          password: values.password,
+        },
+      });
+      toast.success(`Password reset successfully for ${resettingStaff.full_name}`);
+      setResettingStaff(null);
+      resetPasswordForm.reset();
+    } catch (err) {
+      toast.error("Failed to reset staff password");
     }
   };
 
@@ -351,6 +390,15 @@ export default function StaffPage() {
                       <Button
                         variant="ghost"
                         size="sm"
+                        onClick={() => handleOpenResetPassword(staff)}
+                        title="Reset Password"
+                        className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                      >
+                        <KeyRound className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => handleToggleActive(staff)}
                         title={staff.is_active !== false ? "Deactivate Staff" : "Reactivate Staff"}
                         className={staff.is_active !== false ? "text-red-600 hover:text-red-700 hover:bg-red-50" : "text-green-600 hover:text-green-700 hover:bg-green-50"}
@@ -399,6 +447,45 @@ export default function StaffPage() {
               </Button>
               <Button type="submit" disabled={editForm.formState.isSubmitting}>
                 {editForm.formState.isSubmitting ? "Saving..." : "Save Changes"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset Staff Password Dialog */}
+      <Dialog open={!!resettingStaff} onOpenChange={(open) => !open && setResettingStaff(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-700">
+              <KeyRound className="h-5 w-5" />
+              Reset Staff Password
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={resetPasswordForm.handleSubmit(onResetPasswordSubmit)} className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              Set a new password for staff member <span className="font-semibold text-foreground">{resettingStaff?.full_name}</span> ({resettingStaff?.email || resettingStaff?.phone}).
+            </p>
+
+            <div className="space-y-2">
+              <Label htmlFor="reset_password">New Password</Label>
+              <Input
+                id="reset_password"
+                type="password"
+                placeholder="At least 8 characters"
+                {...resetPasswordForm.register("password")}
+              />
+              {resetPasswordForm.formState.errors.password && (
+                <p className="text-xs text-destructive">{resetPasswordForm.formState.errors.password.message}</p>
+              )}
+            </div>
+
+            <DialogFooter className="pt-2">
+              <Button type="button" variant="outline" onClick={() => setResettingStaff(null)}>
+                Cancel
+              </Button>
+              <Button type="submit" className="bg-amber-600 hover:bg-amber-700 text-white" disabled={resetPasswordForm.formState.isSubmitting}>
+                {resetPasswordForm.formState.isSubmitting ? "Resetting..." : "Reset Password"}
               </Button>
             </DialogFooter>
           </form>
