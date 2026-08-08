@@ -10,6 +10,8 @@ import {
 import { format } from "date-fns";
 import { Plus, MoreHorizontal, Play, CheckCircle2, ChevronLeft, ChevronRight, Edit2, XCircle } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslation } from "@/components/i18n-provider";
+import { TranslationKey } from "@/lib/i18n/translations";
 import { EditTaskDialog } from "@/components/tasks/edit-task-dialog";
 import { TaskOut, PaginatedResponse, TaskStatus, User } from "@/types";
 import { useQuery } from "@tanstack/react-query";
@@ -44,6 +46,7 @@ interface TasksDataTableProps {
 }
 
 export function TasksDataTable({ refreshTrigger = 0 }: TasksDataTableProps) {
+  const { t } = useTranslation();
   const [data, setData] = useState<TaskOut[]>([]);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -125,12 +128,23 @@ export function TasksDataTable({ refreshTrigger = 0 }: TasksDataTableProps) {
   const columns: ColumnDef<TaskOut>[] = [
     {
       accessorKey: "type",
-      header: "Type",
-      cell: ({ row }) => <div className="font-medium">{row.getValue("type")}</div>,
+      header: t("tasks.colType"),
+      cell: ({ row }) => {
+        const type = row.getValue("type") as string;
+        const typeKeyMap: Record<string, TranslationKey> = {
+          WATER: "taskType.WATER",
+          FERTILIZE: "taskType.FERTILIZE",
+          SPRAY: "taskType.SPRAY",
+          INSPECT: "taskType.INSPECT",
+          HARVEST: "taskType.HARVEST",
+          OTHER: "taskType.OTHER",
+        };
+        return <div className="font-medium">{t(typeKeyMap[type] || "taskType.OTHER")}</div>;
+      },
     },
     {
       accessorKey: "description",
-      header: "Description",
+      header: t("tasks.colDescription"),
       cell: ({ row }) => (
         <div className="max-w-[300px] truncate" title={row.getValue("description") || ""}>
           {row.getValue("description") || "-"}
@@ -139,7 +153,7 @@ export function TasksDataTable({ refreshTrigger = 0 }: TasksDataTableProps) {
     },
     {
       accessorKey: "due_date",
-      header: "Due Date",
+      header: t("tasks.colDueDate"),
       cell: ({ row }) => {
         const date = row.getValue("due_date") as string;
         return date ? format(new Date(date), "MMM d, yyyy HH:mm") : "-";
@@ -147,17 +161,17 @@ export function TasksDataTable({ refreshTrigger = 0 }: TasksDataTableProps) {
     },
     {
       accessorKey: "assignee_id",
-      header: "Assignee",
+      header: t("tasks.colAssignee"),
       cell: ({ row }) => {
         const assigneeId = row.original.assignee_id;
-        if (!assigneeId) return <span className="text-muted-foreground italic text-xs">Unassigned</span>;
+        if (!assigneeId) return <span className="text-muted-foreground italic text-xs">{t("tasks.unassigned")}</span>;
         const staff = staffList?.find((s) => s.id === assigneeId);
         return <span className="text-sm font-medium">{staff ? staff.full_name : `${assigneeId.substring(0, 8)}...`}</span>;
       },
     },
     {
       accessorKey: "status",
-      header: "Status",
+      header: t("tasks.colStatus"),
       cell: ({ row }) => {
         const status = row.getValue("status") as TaskStatus;
         const colorMap: Record<TaskStatus, string> = {
@@ -166,9 +180,15 @@ export function TasksDataTable({ refreshTrigger = 0 }: TasksDataTableProps) {
           DONE: "bg-green-100 text-green-800",
           CANCELLED: "bg-gray-100 text-gray-800",
         };
+        const statusKeyMap: Record<TaskStatus, TranslationKey> = {
+          PENDING: "taskStatus.PENDING",
+          IN_PROGRESS: "taskStatus.IN_PROGRESS",
+          DONE: "taskStatus.DONE",
+          CANCELLED: "taskStatus.CANCELLED",
+        };
         return (
           <Badge variant="outline" className={colorMap[status]}>
-            {status}
+            {t(statusKeyMap[status])}
           </Badge>
         );
       },
@@ -188,7 +208,7 @@ export function TasksDataTable({ refreshTrigger = 0 }: TasksDataTableProps) {
             } />
             <DropdownMenuContent align="end">
               <DropdownMenuGroup>
-                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                <DropdownMenuLabel>{t("staff.colActions")}</DropdownMenuLabel>
                 <DropdownMenuItem
                   onClick={() => {
                     setTaskToView(task);
@@ -196,14 +216,14 @@ export function TasksDataTable({ refreshTrigger = 0 }: TasksDataTableProps) {
                   }}
                 >
                   <Eye className="mr-2 h-4 w-4" />
-                  View Details
+                  {t("tasks.viewDetails")}
                 </DropdownMenuItem>
                 
                 {/* Everyone (Assignee & Owner) can Start/Complete */}
                 {task.status === "PENDING" && (
                   <DropdownMenuItem onClick={() => handleStartTask(task.id)}>
                     <Play className="mr-2 h-4 w-4" />
-                    Start Task
+                    {t("tasks.startTask")}
                   </DropdownMenuItem>
                 )}
                 {task.status === "IN_PROGRESS" && (
@@ -214,7 +234,7 @@ export function TasksDataTable({ refreshTrigger = 0 }: TasksDataTableProps) {
                     }}
                   >
                     <CheckCircle2 className="mr-2 h-4 w-4" />
-                    Complete Task
+                    {t("tasks.completeTask")}
                   </DropdownMenuItem>
                 )}
 
@@ -224,7 +244,7 @@ export function TasksDataTable({ refreshTrigger = 0 }: TasksDataTableProps) {
                   setIsEditOpen(true);
                 }}>
                   <Edit2 className="mr-2 h-4 w-4" />
-                  Edit Task
+                  {t("tasks.editTask")}
                 </DropdownMenuItem>
                 
                 {task.status !== "CANCELLED" && task.status !== "DONE" && (
@@ -233,7 +253,7 @@ export function TasksDataTable({ refreshTrigger = 0 }: TasksDataTableProps) {
                     onClick={() => handleCancelTask(task.id)}
                   >
                     <XCircle className="mr-2 h-4 w-4" />
-                    Cancel Task
+                    {t("tasks.cancelTask")}
                   </DropdownMenuItem>
                 )}
               </DropdownMenuGroup>
@@ -263,11 +283,11 @@ export function TasksDataTable({ refreshTrigger = 0 }: TasksDataTableProps) {
             setPageIndex(0);
           }}
         >
-          <option value="ALL">All Statuses</option>
-          <option value="PENDING">Pending</option>
-          <option value="IN_PROGRESS">In Progress</option>
-          <option value="DONE">Done</option>
-          <option value="CANCELLED">Cancelled</option>
+          <option value="ALL">{t("tasks.allStatuses")}</option>
+          <option value="PENDING">{t("taskStatus.PENDING")}</option>
+          <option value="IN_PROGRESS">{t("taskStatus.IN_PROGRESS")}</option>
+          <option value="DONE">{t("taskStatus.DONE")}</option>
+          <option value="CANCELLED">{t("taskStatus.CANCELLED")}</option>
         </select>
       </div>
 
@@ -295,7 +315,7 @@ export function TasksDataTable({ refreshTrigger = 0 }: TasksDataTableProps) {
             {isLoading ? (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-24 text-center">
-                  Loading...
+                  {t("tasks.loading")}
                 </TableCell>
               </TableRow>
             ) : table.getRowModel().rows?.length ? (
@@ -320,7 +340,7 @@ export function TasksDataTable({ refreshTrigger = 0 }: TasksDataTableProps) {
                   colSpan={columns.length}
                   className="h-24 text-center"
                 >
-                  No tasks found.
+                  {t("tasks.noTasks")}
                 </TableCell>
               </TableRow>
             )}
@@ -334,7 +354,7 @@ export function TasksDataTable({ refreshTrigger = 0 }: TasksDataTableProps) {
           onClick={() => setPageIndex((old) => Math.max(old - 1, 0))}
           disabled={pageIndex === 0 || isLoading}
         >
-          Previous
+          {t("action.previous")}
         </Button>
         <Button
           variant="outline"
@@ -342,7 +362,7 @@ export function TasksDataTable({ refreshTrigger = 0 }: TasksDataTableProps) {
           onClick={() => setPageIndex((old) => old + 1)}
           disabled={pageIndex >= table.getPageCount() - 1 || isLoading}
         >
-          Next
+          {t("action.next")}
         </Button>
       </div>
 

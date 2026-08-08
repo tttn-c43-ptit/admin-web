@@ -26,7 +26,7 @@ import {
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { ImageUploader } from "@/components/ui/image-uploader";
-
+import { useTranslation } from "@/components/i18n-provider";
 
 const formSchema = z.object({
   status: z.enum(["UNKNOWN", "HEALTHY", "WATCHING", "SICK", "DEAD"] as const),
@@ -49,6 +49,7 @@ export function PlantLogFormDialog({
   plantId,
   onSuccess,
 }: PlantLogFormDialogProps) {
+  const { t } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
@@ -85,29 +86,29 @@ export function PlantLogFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Add Care Log</DialogTitle>
+          <DialogTitle>{t("plantLog.title")}</DialogTitle>
           <DialogDescription>
-            Record the current status of the plant, add notes, and attach photos.
+            {t("plantLog.desc")}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="status">Plant Status</Label>
+            <Label htmlFor="status">{t("createPlant.statusLabel")}</Label>
             <Controller
               control={control}
               name="status"
               render={({ field }) => (
                 <Select value={field.value} onValueChange={field.onChange}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select status" />
+                    <SelectValue placeholder={t("createPlant.selectStatus")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="HEALTHY">Healthy</SelectItem>
-                    <SelectItem value="WATCHING">Watching</SelectItem>
-                    <SelectItem value="SICK">Sick</SelectItem>
-                    <SelectItem value="DEAD">Dead</SelectItem>
-                    <SelectItem value="UNKNOWN">Unknown</SelectItem>
+                    <SelectItem value="HEALTHY">{t("status.healthy")}</SelectItem>
+                    <SelectItem value="WATCHING">{t("status.watching")}</SelectItem>
+                    <SelectItem value="SICK">{t("status.sick")}</SelectItem>
+                    <SelectItem value="DEAD">{t("status.dead")}</SelectItem>
+                    <SelectItem value="UNKNOWN">{t("status.unknown")}</SelectItem>
                   </SelectContent>
                 </Select>
               )}
@@ -118,10 +119,10 @@ export function PlantLogFormDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="note">Notes</Label>
+            <Label htmlFor="note">{t("plantLog.notesLabel")}</Label>
             <Textarea
               id="note"
-              placeholder="e.g. Applied fertilizer today..."
+              placeholder={t("plantLog.notesPlaceholder")}
               className="min-h-[100px]"
               {...register("note")}
             />
@@ -131,7 +132,7 @@ export function PlantLogFormDialog({
           </div>
 
           <div className="space-y-2">
-            <Label>Photos</Label>
+            <Label>{t("plantLog.photosLabel")}</Label>
             <Controller
               control={control}
               name="images"
@@ -155,11 +156,11 @@ export function PlantLogFormDialog({
               onClick={() => onOpenChange(false)}
               disabled={isSubmitting}
             >
-              Cancel
+              {t("action.cancel")}
             </Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Log
+              {t("plantLog.saveLog")}
             </Button>
           </DialogFooter>
         </form>

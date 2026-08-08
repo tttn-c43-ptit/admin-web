@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { apiClient as api } from "@/lib/api-client";
 import { queryKeys } from "@/lib/query-keys";
-import { Zone, ZoneAssignment, User, PaginatedResponse } from "@/types";
+import { Zone, ZoneAssignment, User } from "@/types";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,7 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Plus, Trash2, UserPlus, X, Edit2 } from "lucide-react";
+import { useTranslation } from "@/components/i18n-provider";
 
 const createZoneSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -40,6 +41,7 @@ interface ZonesPanelProps {
 }
 
 export function ZonesPanel({ gardenId }: ZonesPanelProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
 
@@ -87,37 +89,37 @@ export function ZonesPanel({ gardenId }: ZonesPanelProps) {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-4">
         <div>
-          <CardTitle>Zones</CardTitle>
-          <CardDescription>Manage planting zones and staff assignments</CardDescription>
+          <CardTitle>{t("zones.panelTitle")}</CardTitle>
+          <CardDescription>{t("zones.panelDesc")}</CardDescription>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger render={<Button size="sm" />}>
             <Plus className="h-4 w-4 mr-2" />
-            Add Zone
+            {t("zones.addZone")}
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Create New Zone</DialogTitle>
+              <DialogTitle>{t("zones.createNew")}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Zone Name</Label>
+                <Label htmlFor="name">{t("zones.zoneName")}</Label>
                 <Input
                   id="name"
                   {...register("name")}
-                  placeholder="E.g., Zone A1"
+                  placeholder="Ví dụ: Phân khu A1"
                 />
                 {errors.name && (
                   <p className="text-sm text-destructive">{errors.name.message}</p>
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="grid_position">Grid Position (Optional)</Label>
+                <Label htmlFor="grid_position">{t("zones.gridPosition")}</Label>
                 <Input
                   id="grid_position"
                   type="number"
                   {...register("grid_position")}
-                  placeholder="E.g., 1 or 101"
+                  placeholder="Ví dụ: 1 hoặc 101"
                 />
               </div>
               <div className="flex justify-end space-x-2 pt-4">
@@ -126,10 +128,10 @@ export function ZonesPanel({ gardenId }: ZonesPanelProps) {
                   variant="outline"
                   onClick={() => setOpen(false)}
                 >
-                  Cancel
+                  {t("action.cancel")}
                 </Button>
                 <Button type="submit" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? "Adding..." : "Add Zone"}
+                  {createMutation.isPending ? t("action.creating") : t("zones.addZone")}
                 </Button>
               </div>
             </form>
@@ -138,10 +140,10 @@ export function ZonesPanel({ gardenId }: ZonesPanelProps) {
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <p className="text-sm text-muted-foreground text-center py-4">Loading zones...</p>
+          <p className="text-sm text-muted-foreground text-center py-4">{t("zones.loading")}</p>
         ) : !zones || zones.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-4">
-            No zones created yet. Add your first zone.
+            {t("zones.noZones")}
           </p>
         ) : (
           <div className="space-y-4">
@@ -156,6 +158,7 @@ export function ZonesPanel({ gardenId }: ZonesPanelProps) {
 }
 
 function ZoneCard({ zone, onDelete }: { zone: Zone; onDelete: () => void }) {
+  const { t } = useTranslation();
   const [openAssign, setOpenAssign] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState("");
@@ -229,7 +232,7 @@ function ZoneCard({ zone, onDelete }: { zone: Zone; onDelete: () => void }) {
         <div>
           <h4 className="font-medium">{zone.name}</h4>
           {zone.grid_position && (
-            <p className="text-xs text-muted-foreground">Grid: {zone.grid_position}</p>
+            <p className="text-xs text-muted-foreground">{t("zones.gridPosition")}: {zone.grid_position}</p>
           )}
         </div>
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -239,11 +242,11 @@ function ZoneCard({ zone, onDelete }: { zone: Zone; onDelete: () => void }) {
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Edit Zone</DialogTitle>
+                <DialogTitle>{t("zones.editTitle")}</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmitEdit(onSubmitEdit)} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor={`edit-name-${zone.id}`}>Zone Name</Label>
+                  <Label htmlFor={`edit-name-${zone.id}`}>{t("zones.zoneName")}</Label>
                   <Input
                     id={`edit-name-${zone.id}`}
                     {...registerEdit("name")}
@@ -253,7 +256,7 @@ function ZoneCard({ zone, onDelete }: { zone: Zone; onDelete: () => void }) {
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor={`edit-grid-${zone.id}`}>Grid Position (Optional)</Label>
+                  <Label htmlFor={`edit-grid-${zone.id}`}>{t("zones.gridPosition")}</Label>
                   <Input
                     id={`edit-grid-${zone.id}`}
                     type="number"
@@ -272,10 +275,10 @@ function ZoneCard({ zone, onDelete }: { zone: Zone; onDelete: () => void }) {
                       });
                     }}
                   >
-                    Cancel
+                    {t("action.cancel")}
                   </Button>
                   <Button type="submit" disabled={updateMutation.isPending}>
-                    {updateMutation.isPending ? "Saving..." : "Save Changes"}
+                    {updateMutation.isPending ? t("action.saving") : t("action.save")}
                   </Button>
                 </div>
               </form>
@@ -295,24 +298,24 @@ function ZoneCard({ zone, onDelete }: { zone: Zone; onDelete: () => void }) {
 
       <div className="bg-secondary/30 rounded p-2 text-sm">
         <div className="flex justify-between items-center mb-2">
-          <span className="text-xs font-semibold uppercase text-muted-foreground">Assigned Staff</span>
+          <span className="text-xs font-semibold uppercase text-muted-foreground">{t("zones.assignedStaff")}</span>
           <Dialog open={openAssign} onOpenChange={setOpenAssign}>
             <DialogTrigger render={<Button variant="ghost" size="sm" className="h-6 text-xs px-2" />}>
-              <UserPlus className="h-3 w-3 mr-1" /> Assign
+              <UserPlus className="h-3 w-3 mr-1" /> {t("zones.assignButton")}
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Assign Staff to {zone.name}</DialogTitle>
+                <DialogTitle>{t("zones.assignStaffTo").replace("{name}", zone.name)}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 pt-2">
                 <div className="space-y-2">
-                  <Label>Select Staff</Label>
+                  <Label>{t("zones.selectStaff")}</Label>
                   <select
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     value={selectedStaff}
                     onChange={(e) => setSelectedStaff(e.target.value)}
                   >
-                    <option value="" disabled>Select a staff member...</option>
+                    <option value="" disabled>{t("zones.selectStaffPlaceholder")}</option>
                     {availableStaff.map((s) => (
                       <option key={s.id} value={s.id}>
                         {s.full_name} {s.email ? `(${s.email})` : ""}
@@ -321,12 +324,12 @@ function ZoneCard({ zone, onDelete }: { zone: Zone; onDelete: () => void }) {
                   </select>
                 </div>
                 <div className="flex justify-end space-x-2 pt-2">
-                  <Button variant="outline" onClick={() => setOpenAssign(false)}>Cancel</Button>
+                  <Button variant="outline" onClick={() => setOpenAssign(false)}>{t("action.cancel")}</Button>
                   <Button 
                     disabled={!selectedStaff || assignMutation.isPending}
                     onClick={() => assignMutation.mutate(selectedStaff)}
                   >
-                    Assign
+                    {t("zones.assignButton")}
                   </Button>
                 </div>
               </div>
@@ -335,9 +338,9 @@ function ZoneCard({ zone, onDelete }: { zone: Zone; onDelete: () => void }) {
         </div>
         
         {loadingAssignments ? (
-          <p className="text-xs text-muted-foreground">Loading...</p>
+          <p className="text-xs text-muted-foreground">{t("zones.loading")}</p>
         ) : !assignments || assignments.length === 0 ? (
-          <p className="text-xs text-muted-foreground">No staff assigned.</p>
+          <p className="text-xs text-muted-foreground">{t("zones.noStaffAssigned")}</p>
         ) : (
           <div className="flex flex-wrap gap-2">
             {assignments.map((assignment) => (

@@ -6,9 +6,11 @@ import { useParams } from "next/navigation";
 import { apiClient as api } from "@/lib/api-client";
 import { PublicTrace } from "@/types";
 import { format } from "date-fns";
-import { Leaf, Calendar, CheckCircle2, Tractor, Activity, Loader2, MapPin, Copy, Check } from "lucide-react";
+import { Leaf, Calendar, CheckCircle2, Tractor, Activity, Loader2, MapPin, Copy, Check, Globe } from "lucide-react";
+import { useTranslation } from "@/components/i18n-provider";
 
 export default function PublicTracePage() {
+  const { t, language, setLanguage } = useTranslation();
   const params = useParams();
   const code = params.code as string;
   const [copied, setCopied] = useState(false);
@@ -27,6 +29,10 @@ export default function PublicTracePage() {
     }
   };
 
+  const toggleLanguage = () => {
+    setLanguage(language === "vi" ? "en" : "vi");
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#fdfaf6]">
@@ -42,9 +48,9 @@ export default function PublicTracePage() {
           <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
             <span className="text-2xl">🔍</span>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Trace Code Not Found</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{t("publicTrace.notFoundTitle")}</h1>
           <p className="text-gray-600">
-            The code you scanned is invalid or the product information is no longer available.
+            {t("publicTrace.notFoundDesc")}
           </p>
         </div>
       </div>
@@ -65,23 +71,33 @@ export default function PublicTracePage() {
               <Leaf className="w-7 h-7 text-green-200" />
             </div>
             <div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-tight">Product Journey</h1>
-              <p className="text-xs sm:text-sm text-green-100/80 font-medium">Official Traceability Report</p>
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-tight">{t("publicTrace.title")}</h1>
+              <p className="text-xs sm:text-sm text-green-100/80 font-medium">{t("publicTrace.subtitle")}</p>
             </div>
           </div>
 
-          <button
-            onClick={handleCopy}
-            title="Click to copy trace code"
-            className="group bg-white/15 hover:bg-white/25 active:scale-95 backdrop-blur-md px-4 py-2 rounded-xl border border-white/25 font-mono text-xs sm:text-sm font-bold tracking-wider text-white shadow-sm flex items-center gap-2 transition-all duration-200"
-          >
-            <span>{traceData.code}</span>
-            {copied ? (
-              <Check className="w-4 h-4 text-green-300 animate-in zoom-in" />
-            ) : (
-              <Copy className="w-4 h-4 text-white/70 group-hover:text-white transition-colors" />
-            )}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={toggleLanguage}
+              className="bg-white/15 hover:bg-white/25 active:scale-95 backdrop-blur-md px-3 py-2 rounded-xl border border-white/25 text-xs font-semibold text-white shadow-sm flex items-center gap-1.5 transition-all duration-200"
+            >
+              <Globe className="w-4 h-4 text-green-200" />
+              <span>{language === "vi" ? "VI" : "EN"}</span>
+            </button>
+
+            <button
+              onClick={handleCopy}
+              title="Click to copy trace code"
+              className="group bg-white/15 hover:bg-white/25 active:scale-95 backdrop-blur-md px-4 py-2 rounded-xl border border-white/25 font-mono text-xs sm:text-sm font-bold tracking-wider text-white shadow-sm flex items-center gap-2 transition-all duration-200"
+            >
+              <span>{traceData.code}</span>
+              {copied ? (
+                <Check className="w-4 h-4 text-green-300 animate-in zoom-in" />
+              ) : (
+                <Copy className="w-4 h-4 text-white/70 group-hover:text-white transition-colors" />
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -92,17 +108,17 @@ export default function PublicTracePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-4">
               <div>
-                <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-1">Batch</h3>
-                <p className="text-xl font-medium text-gray-900">{traceData.batch_name || "Standard Batch"}</p>
+                <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-1">{t("publicTrace.batch")}</h3>
+                <p className="text-xl font-medium text-gray-900">{traceData.batch_name || t("publicTrace.standardBatch")}</p>
               </div>
               
               <div>
-                <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-1">Variety</h3>
-                <p className="text-gray-900 font-medium">{traceData.variety || "Not specified"}</p>
+                <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-1">{t("publicTrace.variety")}</h3>
+                <p className="text-gray-900 font-medium">{traceData.variety || t("publicTrace.notSpecified")}</p>
               </div>
 
               <div>
-                <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-1">Origin Garden</h3>
+                <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-1">{t("publicTrace.originGarden")}</h3>
                 <div className="flex items-start gap-2 text-gray-900 font-medium mt-1">
                   <MapPin className="w-5 h-5 text-green-600 shrink-0" />
                   <div>
@@ -117,17 +133,17 @@ export default function PublicTracePage() {
 
             <div className="space-y-4">
                <div>
-                <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-1">Harvest Date</h3>
+                <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-1">{t("publicTrace.harvestDate")}</h3>
                 <div className="flex items-center gap-2 font-medium text-gray-900">
                   <Calendar className="w-4 h-4 text-amber-600" />
-                  {traceData.harvest_date ? format(new Date(traceData.harvest_date), "MMMM d, yyyy") : "Not specified"}
+                  {traceData.harvest_date ? format(new Date(traceData.harvest_date), "MMMM d, yyyy") : t("publicTrace.notSpecified")}
                 </div>
               </div>
 
               <div>
-                <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-1">Verified True Origin</h3>
+                <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-1">{t("publicTrace.verifiedOrigin")}</h3>
                 <div className="flex items-center gap-2 text-green-700 bg-green-50 px-3 py-1.5 rounded-lg border border-green-100 inline-flex font-medium">
-                  <CheckCircle2 className="w-4 h-4" /> Authentic source
+                  <CheckCircle2 className="w-4 h-4" /> {t("publicTrace.authenticSource")}
                 </div>
               </div>
             </div>
@@ -137,27 +153,27 @@ export default function PublicTracePage() {
         {/* The Story / Journey */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
           <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-            <Activity className="w-5 h-5 text-green-600" /> Lifecycle Stats
+            <Activity className="w-5 h-5 text-green-600" /> {t("publicTrace.lifecycleTitle")}
           </h2>
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="bg-gray-50 p-4 rounded-xl text-center">
               <div className="text-2xl font-bold text-gray-900">{traceData.plant_count}</div>
-              <div className="text-xs text-gray-500 mt-1 font-medium uppercase tracking-wider">Plants</div>
+              <div className="text-xs text-gray-500 mt-1 font-medium uppercase tracking-wider">{t("publicTrace.plants")}</div>
             </div>
             <div className="bg-gray-50 p-4 rounded-xl text-center">
               <div className="text-2xl font-bold text-gray-900">{traceData.total_harvested_kg}</div>
-              <div className="text-xs text-gray-500 mt-1 font-medium uppercase tracking-wider">Total KG Yield</div>
+              <div className="text-xs text-gray-500 mt-1 font-medium uppercase tracking-wider">{t("publicTrace.totalYield")}</div>
             </div>
             <div className="bg-gray-50 p-4 rounded-xl text-center">
               <div className="text-2xl font-bold text-gray-900">{traceData.care_reports}</div>
-              <div className="text-xs text-gray-500 mt-1 font-medium uppercase tracking-wider">Care Reports</div>
+              <div className="text-xs text-gray-500 mt-1 font-medium uppercase tracking-wider">{t("publicTrace.careReports")}</div>
             </div>
             <div className="bg-gray-50 p-4 rounded-xl text-center">
               <div className="text-sm font-bold text-gray-900 mt-1">
                 {traceData.planted_from ? format(new Date(traceData.planted_from), "MMM yyyy") : "-"}
               </div>
-              <div className="text-xs text-gray-500 mt-1 font-medium uppercase tracking-wider">Planted</div>
+              <div className="text-xs text-gray-500 mt-1 font-medium uppercase tracking-wider">{t("publicTrace.planted")}</div>
             </div>
           </div>
         </div>
@@ -166,7 +182,7 @@ export default function PublicTracePage() {
         {traceData.public_info && Object.keys(traceData.public_info).length > 0 && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <Tractor className="w-5 h-5 text-green-600" /> Additional Details
+              <Tractor className="w-5 h-5 text-green-600" /> {t("publicTrace.additionalDetails")}
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {Object.entries(traceData.public_info).map(([key, value]) => (
@@ -187,7 +203,7 @@ export default function PublicTracePage() {
       
       {/* Footer */}
       <div className="text-center mt-12 text-gray-400 text-sm font-medium">
-        Powered by AgTech Platform
+        {t("publicTrace.poweredBy")}
       </div>
     </div>
   );

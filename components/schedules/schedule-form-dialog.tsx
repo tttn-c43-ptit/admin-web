@@ -5,11 +5,10 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { apiClient as api } from "@/lib/api-client";
-import { localToUtcCron } from "@/lib/cron-utils";
+import { localToUtcCron, parseUtcCronToLocalForm } from "@/lib/cron-utils";
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
 import { Zone, ScheduleOut } from "@/types";
-import { parseUtcCronToLocalForm } from "@/lib/cron-utils";
 
 import {
   Dialog,
@@ -37,7 +36,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CalendarClock, Loader2 } from "lucide-react";
-import { getUserRole } from "@/lib/jwt";
+import { useTranslation } from "@/components/i18n-provider";
 
 const scheduleSchema = z.object({
   type: z.enum(["WATER", "FERTILIZE", "SPRAY", "INSPECT", "HARVEST", "OTHER"]),
@@ -61,6 +60,7 @@ interface ScheduleFormDialogProps {
 }
 
 export function ScheduleFormDialog({ gardenId, initialData, open: controlledOpen, onOpenChange: setControlledOpen, trigger, onSuccess }: ScheduleFormDialogProps) {
+  const { t } = useTranslation();
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = controlledOpen !== undefined ? controlledOpen : uncontrolledOpen;
   const setOpen = setControlledOpen !== undefined ? setControlledOpen : setUncontrolledOpen;
@@ -119,8 +119,6 @@ export function ScheduleFormDialog({ gardenId, initialData, open: controlledOpen
   const onSubmit = async (data: ScheduleFormValues) => {
     setIsSubmitting(true);
     try {
-      const [hour, minute] = data.time.split(":");
-      
       let cron_expr = localToUtcCron(data.frequency, data.time, data.dayOfWeek || "1", data.dayOfMonth || "1");
 
       const payload = {
@@ -159,13 +157,13 @@ export function ScheduleFormDialog({ gardenId, initialData, open: controlledOpen
         <DialogTrigger render={
           <Button variant="outline">
             <CalendarClock className="mr-2 h-4 w-4" />
-            Create Schedule
+            {t("schedules.createTitle")}
           </Button>
         } />
       )}
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Schedule" : "Create Recurring Schedule"}</DialogTitle>
+          <DialogTitle>{isEditing ? t("schedules.editTitle") : t("schedules.createTitle")}</DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
@@ -175,23 +173,23 @@ export function ScheduleFormDialog({ gardenId, initialData, open: controlledOpen
               name="type"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Task Type</FormLabel>
+                  <FormLabel>{t("tasks.colType")}</FormLabel>
                   <Select
                     onValueChange={field.onChange}
                     value={field.value}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a task type" />
+                        <SelectValue placeholder={t("taskForm.selectType")} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="WATER">Water</SelectItem>
-                      <SelectItem value="FERTILIZE">Fertilize</SelectItem>
-                      <SelectItem value="SPRAY">Spray</SelectItem>
-                      <SelectItem value="INSPECT">Inspect</SelectItem>
-                      <SelectItem value="HARVEST">Harvest</SelectItem>
-                      <SelectItem value="OTHER">Other</SelectItem>
+                      <SelectItem value="WATER">{t("taskType.WATER")}</SelectItem>
+                      <SelectItem value="FERTILIZE">{t("taskType.FERTILIZE")}</SelectItem>
+                      <SelectItem value="SPRAY">{t("taskType.SPRAY")}</SelectItem>
+                      <SelectItem value="INSPECT">{t("taskType.INSPECT")}</SelectItem>
+                      <SelectItem value="HARVEST">{t("taskType.HARVEST")}</SelectItem>
+                      <SelectItem value="OTHER">{t("taskType.OTHER")}</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -204,20 +202,20 @@ export function ScheduleFormDialog({ gardenId, initialData, open: controlledOpen
               name="frequency"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Frequency</FormLabel>
+                  <FormLabel>{t("schedules.frequency")}</FormLabel>
                   <Select
                     onValueChange={field.onChange}
                     value={field.value}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select frequency" />
+                        <SelectValue placeholder={t("schedules.frequency")} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="DAILY">Daily</SelectItem>
-                      <SelectItem value="WEEKLY">Weekly</SelectItem>
-                      <SelectItem value="MONTHLY">Monthly</SelectItem>
+                      <SelectItem value="DAILY">{t("schedules.daily")}</SelectItem>
+                      <SelectItem value="WEEKLY">{t("schedules.weekly")}</SelectItem>
+                      <SelectItem value="MONTHLY">{t("schedules.monthly")}</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -231,7 +229,7 @@ export function ScheduleFormDialog({ gardenId, initialData, open: controlledOpen
                 name="time"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Time</FormLabel>
+                    <FormLabel>{t("schedules.time")}</FormLabel>
                     <FormControl>
                       <Input type="time" {...field} />
                     </FormControl>
@@ -246,24 +244,24 @@ export function ScheduleFormDialog({ gardenId, initialData, open: controlledOpen
                   name="dayOfWeek"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Day of Week</FormLabel>
+                      <FormLabel>{t("schedules.dayOfWeek")}</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         value={field.value}
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select day" />
+                            <SelectValue placeholder={t("schedules.dayOfWeek")} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="1">Monday</SelectItem>
-                          <SelectItem value="2">Tuesday</SelectItem>
-                          <SelectItem value="3">Wednesday</SelectItem>
-                          <SelectItem value="4">Thursday</SelectItem>
-                          <SelectItem value="5">Friday</SelectItem>
-                          <SelectItem value="6">Saturday</SelectItem>
-                          <SelectItem value="0">Sunday</SelectItem>
+                          <SelectItem value="1">Thứ Hai (Monday)</SelectItem>
+                          <SelectItem value="2">Thứ Ba (Tuesday)</SelectItem>
+                          <SelectItem value="3">Thứ Tư (Wednesday)</SelectItem>
+                          <SelectItem value="4">Thứ Năm (Thursday)</SelectItem>
+                          <SelectItem value="5">Thứ Sáu (Friday)</SelectItem>
+                          <SelectItem value="6">Thứ Bảy (Saturday)</SelectItem>
+                          <SelectItem value="0">Chủ Nhật (Sunday)</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -278,7 +276,7 @@ export function ScheduleFormDialog({ gardenId, initialData, open: controlledOpen
                   name="dayOfMonth"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Day of Month</FormLabel>
+                      <FormLabel>{t("schedules.dayOfMonth")}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -299,20 +297,20 @@ export function ScheduleFormDialog({ gardenId, initialData, open: controlledOpen
               name="zone_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Zone (Optional)</FormLabel>
+                  <FormLabel>{t("schedules.applyZone")}</FormLabel>
                   <Select
                     onValueChange={field.onChange}
                     value={field.value}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Apply to specific zone">
-                          {field.value ? zones?.find(z => z.id === field.value)?.name || "All Zones (Entire Garden)" : "All Zones (Entire Garden)"}
+                        <SelectValue placeholder={t("schedules.allZones")}>
+                          {field.value ? zones?.find(z => z.id === field.value)?.name || t("schedules.allZones") : t("schedules.allZones")}
                         </SelectValue>
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">All Zones (Entire Garden)</SelectItem>
+                      <SelectItem value="">{t("schedules.allZones")}</SelectItem>
                       {zones?.map((zone) => (
                         <SelectItem key={zone.id} value={zone.id}>
                           {zone.name}
@@ -330,10 +328,10 @@ export function ScheduleFormDialog({ gardenId, initialData, open: controlledOpen
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description (Optional)</FormLabel>
+                  <FormLabel>{t("taskForm.descriptionLabel")}</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Add any additional details..."
+                      placeholder={t("taskForm.descPlaceholder")}
                       {...field}
                     />
                   </FormControl>
@@ -347,10 +345,10 @@ export function ScheduleFormDialog({ gardenId, initialData, open: controlledOpen
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
+                  {t("action.saving")}
                 </>
               ) : (
-                isEditing ? "Save Changes" : "Create Schedule"
+                isEditing ? t("action.save") : t("action.create")
               )}
             </Button>
             </div>

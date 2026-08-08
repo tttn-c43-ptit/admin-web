@@ -37,8 +37,11 @@ import { TransactionDialog } from "@/components/inventory/transaction-dialog";
 import { TransactionHistoryDialog } from "@/components/inventory/transaction-history-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { useTranslation } from "@/components/i18n-provider";
+import { TranslationKey } from "@/lib/i18n/translations";
 
 export default function InventoryPage() {
+  const { t } = useTranslation();
   const [gardenId, setGardenId] = useState<string>("");
   const [typeFilter, setTypeFilter] = useState<string>("ALL");
   const [pageIndex, setPageIndex] = useState(0);
@@ -75,7 +78,7 @@ export default function InventoryPage() {
   });
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this item?")) return;
+    if (!confirm(t("inventory.deleteConfirm"))) return;
     try {
       await api.delete(`api/inventory/${id}`);
       toast.success("Item deleted successfully");
@@ -85,24 +88,31 @@ export default function InventoryPage() {
     }
   };
 
+  const invTypeKeyMap: Record<ItemType, TranslationKey> = {
+    FERTILIZER: "invType.FERTILIZE",
+    PESTICIDE: "invType.PESTICIDE",
+    TOOL: "invType.TOOL",
+    OTHER: "invType.OTHER",
+  };
+
   const columns: ColumnDef<InventoryItem>[] = [
     {
       accessorKey: "name",
-      header: "Name",
+      header: t("inventory.colName"),
       cell: ({ row }) => <div className="font-medium">{row.original.name}</div>,
     },
     {
       accessorKey: "type",
-      header: "Type",
+      header: t("inventory.colType"),
       cell: ({ row }) => (
         <Badge variant="outline" className="text-xs">
-          {row.original.type}
+          {t(invTypeKeyMap[row.original.type] || "invType.OTHER")}
         </Badge>
       ),
     },
     {
       accessorKey: "quantity",
-      header: "Quantity",
+      header: t("inventory.colQuantity"),
       cell: ({ row }) => {
         const isLow = row.original.quantity < row.original.min_quantity;
         return (
@@ -114,12 +124,12 @@ export default function InventoryPage() {
     },
     {
       accessorKey: "min_quantity",
-      header: "Min Quantity",
+      header: t("inventory.colMinQuantity"),
       cell: ({ row }) => <div className="font-mono">{row.original.min_quantity} {row.original.unit || ""}</div>,
     },
     {
       accessorKey: "expiry_date",
-      header: "Expiry",
+      header: t("inventory.colExpiry"),
       cell: ({ row }) => {
         const d = row.original.expiry_date;
         return d ? format(new Date(d), "MMM d, yyyy") : "-";
@@ -138,22 +148,22 @@ export default function InventoryPage() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuGroup>
-                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                <DropdownMenuLabel>{t("inventory.colActions")}</DropdownMenuLabel>
                 <DropdownMenuItem onClick={() => setTransactionItem(item)}>
-                  <ArrowLeftRight className="mr-2 h-4 w-4" /> Add Transaction
+                  <ArrowLeftRight className="mr-2 h-4 w-4" /> {t("inventory.addTransaction")}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setHistoryItem(item)}>
-                  <ListOrdered className="mr-2 h-4 w-4" /> View Ledger
+                  <ListOrdered className="mr-2 h-4 w-4" /> {t("inventory.viewLedger")}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => {
                   setEditingItem(item);
                   setFormOpen(true);
                 }}>
-                  <Edit className="mr-2 h-4 w-4" /> Edit
+                  <Edit className="mr-2 h-4 w-4" /> {t("action.edit")}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleDelete(item.id)} className="text-red-600">
-                  <Trash2 className="mr-2 h-4 w-4" /> Delete
+                  <Trash2 className="mr-2 h-4 w-4" /> {t("action.delete")}
                 </DropdownMenuItem>
               </DropdownMenuGroup>
             </DropdownMenuContent>
@@ -175,13 +185,13 @@ export default function InventoryPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Inventory</h2>
-          <p className="text-muted-foreground mt-1">Manage farm supplies, fertilizers, tools</p>
+          <h2 className="text-3xl font-bold tracking-tight">{t("inventory.title")}</h2>
+          <p className="text-muted-foreground mt-1">{t("inventory.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
           <GardenSelector value={gardenId} onChange={setGardenId} />
           <Button onClick={() => { setEditingItem(null); setFormOpen(true); }} disabled={!gardenId}>
-            <Plus className="mr-2 h-4 w-4" /> Add Item
+            <Plus className="mr-2 h-4 w-4" /> {t("inventory.addItem")}
           </Button>
         </div>
       </div>
@@ -190,16 +200,16 @@ export default function InventoryPage() {
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex gap-3 text-amber-800">
           <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" />
           <div>
-            <h4 className="font-semibold text-amber-900">Inventory Warnings</h4>
+            <h4 className="font-semibold text-amber-900">{t("inventory.warningsTitle")}</h4>
             <ul className="list-disc pl-5 text-sm mt-1 space-y-1">
               {warnings.low_stock.length > 0 && (
-                <li>{warnings.low_stock.length} items are running low on stock.</li>
+                <li>{t("inventory.warnLowStock").replace("{count}", String(warnings.low_stock.length))}</li>
               )}
               {warnings.expiring_soon.length > 0 && (
-                <li>{warnings.expiring_soon.length} items are expiring soon.</li>
+                <li>{t("inventory.warnExpiring").replace("{count}", String(warnings.expiring_soon.length))}</li>
               )}
               {warnings.expired.length > 0 && (
-                <li>{warnings.expired.length} items have expired.</li>
+                <li>{t("inventory.warnExpired").replace("{count}", String(warnings.expired.length))}</li>
               )}
             </ul>
           </div>
@@ -207,17 +217,17 @@ export default function InventoryPage() {
       )}
 
       <div className="flex items-center gap-2">
-        <span className="text-sm font-medium">Filter by Type:</span>
+        <span className="text-sm font-medium">{t("inventory.filterTypeLabel")}</span>
         <Select value={typeFilter} onValueChange={(val) => { if (val) { setTypeFilter(val); setPageIndex(0); } }}>
           <SelectTrigger className="w-[180px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="ALL">All Types</SelectItem>
-            <SelectItem value="FERTILIZER">Fertilizer</SelectItem>
-            <SelectItem value="PESTICIDE">Pesticide</SelectItem>
-            <SelectItem value="TOOL">Tool</SelectItem>
-            <SelectItem value="OTHER">Other</SelectItem>
+            <SelectItem value="ALL">{t("inventory.allTypes")}</SelectItem>
+            <SelectItem value="FERTILIZER">{t("invType.FERTILIZE")}</SelectItem>
+            <SelectItem value="PESTICIDE">{t("invType.PESTICIDE")}</SelectItem>
+            <SelectItem value="TOOL">{t("invType.TOOL")}</SelectItem>
+            <SelectItem value="OTHER">{t("invType.OTHER")}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -244,7 +254,7 @@ export default function InventoryPage() {
             {isLoading ? (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-24 text-center">
-                  Loading...
+                  {t("inventory.loading")}
                 </TableCell>
               </TableRow>
             ) : table.getRowModel().rows?.length ? (
@@ -260,7 +270,7 @@ export default function InventoryPage() {
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-24 text-center">
-                  No items found.
+                  {t("inventory.noItems")}
                 </TableCell>
               </TableRow>
             )}
@@ -275,7 +285,7 @@ export default function InventoryPage() {
           onClick={() => setPageIndex((old) => Math.max(old - 1, 0))}
           disabled={pageIndex === 0 || isLoading}
         >
-          Previous
+          {t("action.previous")}
         </Button>
         <Button
           variant="outline"
@@ -283,7 +293,7 @@ export default function InventoryPage() {
           onClick={() => setPageIndex((old) => old + 1)}
           disabled={pageIndex >= table.getPageCount() - 1 || isLoading}
         >
-          Next
+          {t("action.next")}
         </Button>
       </div>
 

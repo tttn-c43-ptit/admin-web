@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { apiClient as api } from "@/lib/api-client";
 import { ImageUploader } from "@/components/ui/image-uploader";
+import { useTranslation } from "@/components/i18n-provider";
 
 interface TaskCompleteDialogProps {
   open: boolean;
@@ -25,6 +26,7 @@ export function TaskCompleteDialog({
   taskId,
   onSuccess,
 }: TaskCompleteDialogProps) {
+  const { t } = useTranslation();
   const [images, setImages] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -49,11 +51,11 @@ export function TaskCompleteDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Complete Task</DialogTitle>
+          <DialogTitle>{t("taskComplete.title")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <p className="text-sm text-muted-foreground">
-            Please upload proof images (optional) before marking this task as complete.
+            {t("taskComplete.subtitle")}
           </p>
           <ImageUploader value={images} onChange={setImages} />
           
@@ -63,16 +65,16 @@ export function TaskCompleteDialog({
               onClick={() => onOpenChange(false)}
               disabled={isSubmitting}
             >
-              Cancel
+              {t("action.cancel")}
             </Button>
             <Button onClick={handleSubmit} disabled={isSubmitting}>
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Completing...
+                  {t("taskComplete.submitting")}
                 </>
               ) : (
-                "Complete Task"
+                t("taskComplete.submitButton")
               )}
             </Button>
           </div>

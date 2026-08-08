@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useTranslation } from "@/components/i18n-provider";
 
 interface TransactionHistoryDialogProps {
   item: InventoryItem | null;
@@ -21,6 +22,7 @@ export function TransactionHistoryDialog({
   item,
   onOpenChange,
 }: TransactionHistoryDialogProps) {
+  const { t } = useTranslation();
   const { data: response, isLoading } = useQuery({
     queryKey: ["inventory", "transactions", item?.id],
     queryFn: () =>
@@ -34,7 +36,7 @@ export function TransactionHistoryDialog({
     <Dialog open={!!item} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[80vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Ledger: {item?.name}</DialogTitle>
+          <DialogTitle>{t("ledgerDialog.title")} {item?.name}</DialogTitle>
         </DialogHeader>
 
         <div className="flex-1 overflow-auto mt-4 pr-4">
@@ -58,7 +60,7 @@ export function TransactionHistoryDialog({
                     </div>
                     <div>
                       <div className="font-medium text-sm">
-                        {tx.direction === "IN" ? "Stock Added" : "Stock Withdrawn"}
+                        {tx.direction === "IN" ? t("ledgerDialog.added") : t("ledgerDialog.withdrawn")}
                       </div>
                       <div className="text-xs text-muted-foreground mt-1">
                         {format(new Date(tx.created_at), "MMM d, yyyy HH:mm")}
@@ -80,7 +82,7 @@ export function TransactionHistoryDialog({
             </div>
           ) : (
             <div className="text-center py-8 text-muted-foreground text-sm">
-              No transactions recorded yet.
+              {t("ledgerDialog.noTx")}
             </div>
           )}
         </div>

@@ -1,73 +1,86 @@
+"use client";
+
 import { GardenStats } from "@/types";
 import { Sprout, Activity, AlertTriangle, FileText, CheckCircle2, Bug, Eye, Skull } from "lucide-react";
+import { useTranslation } from "@/components/i18n-provider";
+import { TranslationKey } from "@/lib/i18n/translations";
 
 interface StatsCardsProps {
   stats: GardenStats;
 }
 
 export function StatsCards({ stats }: StatsCardsProps) {
-  const cards = [
+  const { t } = useTranslation();
+
+  const cards: {
+    titleKey: TranslationKey;
+    value: number;
+    icon: typeof Sprout;
+    descKey: TranslationKey;
+    iconColor: string;
+    bgColor: string;
+  }[] = [
     {
-      title: "Total Plants",
+      titleKey: "dashCard.totalPlants",
       value: stats.total_plants,
       icon: Sprout,
-      description: "Total plants in the garden",
+      descKey: "dashCard.totalPlantsSub",
       iconColor: "text-emerald-600",
       bgColor: "bg-emerald-100",
     },
     {
-      title: "Healthy",
+      titleKey: "dashCard.healthy",
       value: stats.by_status["HEALTHY"] || 0,
       icon: CheckCircle2,
-      description: "Plants in good condition",
+      descKey: "dashCard.healthySub",
       iconColor: "text-green-600",
       bgColor: "bg-green-100",
     },
     {
-      title: "Watching",
+      titleKey: "dashCard.watching",
       value: stats.by_status["WATCHING"] || 0,
       icon: Eye,
-      description: "Stunted or under observation",
+      descKey: "dashCard.watchingSub",
       iconColor: "text-amber-600",
       bgColor: "bg-amber-100",
     },
     {
-      title: "Sick",
+      titleKey: "dashCard.sick",
       value: stats.by_status["SICK"] || 0,
       icon: Bug,
-      description: "Plants needing treatment",
+      descKey: "dashCard.sickSub",
       iconColor: "text-red-600",
       bgColor: "bg-red-100",
     },
     {
-      title: "Dead",
+      titleKey: "dashCard.dead",
       value: stats.by_status["DEAD"] || 0,
       icon: Skull,
-      description: "Plants that have died",
+      descKey: "dashCard.deadSub",
       iconColor: "text-neutral-600",
       bgColor: "bg-neutral-100",
     },
     {
-      title: "Updated Today",
+      titleKey: "dashCard.updatedToday",
       value: stats.updated_today,
       icon: Activity,
-      description: "Plant records updated today",
+      descKey: "dashCard.updatedTodaySub",
       iconColor: "text-indigo-600",
       bgColor: "bg-indigo-100",
     },
     {
-      title: "Stale Records",
+      titleKey: "dashCard.staleRecords",
       value: stats.stale,
       icon: AlertTriangle,
-      description: "Plants lacking recent updates",
+      descKey: "dashCard.staleRecordsSub",
       iconColor: "text-orange-600",
       bgColor: "bg-orange-100",
     },
     {
-      title: "Recent Reports",
+      titleKey: "dashCard.recentReports",
       value: stats.reports_last_7_days,
       icon: FileText,
-      description: "Log reports in the last 7 days",
+      descKey: "dashCard.recentReportsSub",
       iconColor: "text-blue-600",
       bgColor: "bg-blue-100",
     },
@@ -83,7 +96,7 @@ export function StatsCards({ stats }: StatsCardsProps) {
             className="rounded-xl border bg-card text-card-foreground shadow-sm p-6 flex flex-col justify-between"
           >
             <div className="flex flex-row items-center justify-between pb-2">
-              <h3 className="tracking-tight text-sm font-medium">{card.title}</h3>
+              <h3 className="tracking-tight text-sm font-medium">{t(card.titleKey)}</h3>
               <div className={`p-2 rounded-full ${card.bgColor}`}>
                 <Icon className={`h-4 w-4 ${card.iconColor}`} />
               </div>
@@ -91,7 +104,7 @@ export function StatsCards({ stats }: StatsCardsProps) {
             <div>
               <div className="text-2xl font-bold">{card.value}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                {card.description}
+                {t(card.descKey)}
               </p>
             </div>
           </div>

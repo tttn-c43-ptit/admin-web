@@ -52,6 +52,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { useTranslation } from "@/components/i18n-provider";
 // Dialog components
 import { BulkGenerateDialog } from "@/components/plants/bulk-generate-dialog";
 import { PrintTagsDialog } from "@/components/plants/print-tags-dialog";
@@ -64,6 +65,7 @@ interface PlantsDataTableProps {
 }
 
 export function PlantsDataTable({ gardenId }: PlantsDataTableProps) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(10);
@@ -111,7 +113,7 @@ export function PlantsDataTable({ gardenId }: PlantsDataTableProps) {
   const columns: ColumnDef<Plant>[] = [
     {
       accessorKey: "code",
-      header: "Plant Code",
+      header: t("plants.colCode"),
       cell: ({ row }) => (
         <Link href={`/plants/${row.original.id}`} className="font-medium text-blue-600 hover:underline">
           {row.original.code}
@@ -120,35 +122,35 @@ export function PlantsDataTable({ gardenId }: PlantsDataTableProps) {
     },
     {
       accessorKey: "status",
-      header: "Status",
+      header: t("plants.colStatus"),
       cell: ({ row }) => <PlantStatusBadge status={row.original.status} />,
     },
     {
       accessorKey: "zone_id",
-      header: "Zone",
+      header: t("plants.colZone"),
       cell: ({ row }) => {
-        if (!row.original.zone_id) return "Unassigned";
+        if (!row.original.zone_id) return t("plants.unassignedZone");
         if (zonesData) {
           const zone = zonesData.find((z) => z.id === row.original.zone_id);
-          return zone ? zone.name : "Unknown Zone";
+          return zone ? zone.name : t("plants.unassignedZone");
         }
-        return "Loading...";
+        return t("zones.loading");
       },
     },
     {
       accessorKey: "planted_at",
-      header: "Planted At",
+      header: t("plants.colPlantedAt"),
       cell: ({ row }) => row.original.planted_at ? formatDate(row.original.planted_at) : "-",
     },
     {
       id: "actions",
-      header: "Actions",
+      header: t("plants.colActions"),
       cell: ({ row }) => {
         const plant = row.original;
         return (
           <div className="flex gap-2 items-center justify-end">
             <Link href={`/plants/${plant.id}`}>
-              <Button variant="ghost" size="icon" title="View details">
+              <Button variant="ghost" size="icon" title={t("plants.viewDetails")}>
                 <Eye className="h-4 w-4" />
               </Button>
             </Link>
@@ -162,7 +164,7 @@ export function PlantsDataTable({ gardenId }: PlantsDataTableProps) {
               } />
               <DropdownMenuContent align="end">
                 <DropdownMenuGroup>
-                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                  <DropdownMenuLabel>{t("plants.colActions")}</DropdownMenuLabel>
                   <DropdownMenuItem
                   onClick={() => {
                     setPlantToPrint(plant);
@@ -170,7 +172,7 @@ export function PlantsDataTable({ gardenId }: PlantsDataTableProps) {
                   }}
                 >
                   <Printer className="mr-2 h-4 w-4" />
-                  Print Tag
+                  {t("plants.printTag")}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {
@@ -179,7 +181,7 @@ export function PlantsDataTable({ gardenId }: PlantsDataTableProps) {
                   }}
                 >
                   <Edit2 className="mr-2 h-4 w-4" />
-                  Edit Plant
+                  {t("plants.editPlant")}
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
@@ -192,7 +194,7 @@ export function PlantsDataTable({ gardenId }: PlantsDataTableProps) {
                     }}
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
-                    Delete Plant
+                    {t("plants.deletePlant")}
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
               </DropdownMenuContent>
@@ -216,7 +218,7 @@ export function PlantsDataTable({ gardenId }: PlantsDataTableProps) {
       <div className="flex flex-col sm:flex-row justify-between gap-4">
         <div className="flex flex-wrap items-center gap-2">
           <Input
-            placeholder="Filter by code..."
+            placeholder={t("plants.filterCodePlaceholder")}
             value={codeFilter}
             onChange={(e) => {
               setCodeFilter(e.target.value);
@@ -234,16 +236,16 @@ export function PlantsDataTable({ gardenId }: PlantsDataTableProps) {
             }}
           >
             <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Status">
-                {statusFilter === "ALL" ? "All Status" : statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1).toLowerCase()}
+              <SelectValue placeholder={t("plants.colStatus")}>
+                {statusFilter === "ALL" ? t("plants.allStatus") : statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1).toLowerCase()}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="ALL">All Status</SelectItem>
-              <SelectItem value="HEALTHY">Healthy</SelectItem>
-              <SelectItem value="WATCHING">Watching</SelectItem>
-              <SelectItem value="SICK">Sick</SelectItem>
-              <SelectItem value="DEAD">Dead</SelectItem>
+              <SelectItem value="ALL">{t("plants.allStatus")}</SelectItem>
+              <SelectItem value="HEALTHY">{t("status.healthy")}</SelectItem>
+              <SelectItem value="WATCHING">{t("status.watching")}</SelectItem>
+              <SelectItem value="SICK">{t("status.sick")}</SelectItem>
+              <SelectItem value="DEAD">{t("status.dead")}</SelectItem>
             </SelectContent>
           </Select>
 
@@ -257,12 +259,12 @@ export function PlantsDataTable({ gardenId }: PlantsDataTableProps) {
             }}
           >
             <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Zone">
-                {zoneFilter === "ALL" ? "All Zones" : zonesData?.find((z) => z.id === zoneFilter)?.name}
+              <SelectValue placeholder={t("plants.colZone")}>
+                {zoneFilter === "ALL" ? t("plants.allZones") : zonesData?.find((z) => z.id === zoneFilter)?.name}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="ALL">All Zones</SelectItem>
+              <SelectItem value="ALL">{t("plants.allZones")}</SelectItem>
               {zonesData?.map((zone) => (
                 <SelectItem key={zone.id} value={zone.id}>
                   {zone.name}
@@ -275,14 +277,14 @@ export function PlantsDataTable({ gardenId }: PlantsDataTableProps) {
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={() => setIsPrintDialogOpen(true)}>
             <Printer className="mr-2 h-4 w-4" />
-            Print Tags
+            {t("plants.printTags")}
           </Button>
           <Button variant="outline" onClick={() => setIsCreatePlantOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
-            Add Plant
+            {t("plants.addPlant")}
           </Button>
           <Button onClick={() => setIsBulkGenerateOpen(true)}>
-            Bulk Add
+            {t("plants.bulkAdd")}
           </Button>
         </div>
       </div>
@@ -311,13 +313,13 @@ export function PlantsDataTable({ gardenId }: PlantsDataTableProps) {
             {isLoading ? (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-24 text-center">
-                  Loading plants...
+                  {t("plants.loading")}
                 </TableCell>
               </TableRow>
             ) : isError ? (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-24 text-center text-red-500">
-                  Failed to load plants.
+                  {t("plants.failed")}
                 </TableCell>
               </TableRow>
             ) : table.getRowModel().rows?.length ? (
@@ -336,7 +338,7 @@ export function PlantsDataTable({ gardenId }: PlantsDataTableProps) {
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-24 text-center">
-                  No plants found.
+                  {t("plants.noPlantsFound")}
                 </TableCell>
               </TableRow>
             )}
@@ -348,7 +350,10 @@ export function PlantsDataTable({ gardenId }: PlantsDataTableProps) {
       {data && data.total > 0 && (
         <div className="flex items-center justify-between">
           <div className="text-sm text-muted-foreground">
-            Showing {page * pageSize + 1} to {Math.min((page + 1) * pageSize, data.total)} of {data.total} plants
+            {t("plants.showingRange")
+              .replace("{start}", (page * pageSize + 1).toString())
+              .replace("{end}", Math.min((page + 1) * pageSize, data.total).toString())
+              .replace("{total}", data.total.toString())}
           </div>
           <div className="flex items-center gap-2">
             <Select
@@ -433,14 +438,13 @@ export function PlantsDataTable({ gardenId }: PlantsDataTableProps) {
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogTitle>{t("plants.deleteConfirmTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete plant <strong>{plantToDelete?.code}</strong>.
-              This action cannot be undone.
+              {t("plants.deleteConfirmDesc").replace("{code}", plantToDelete?.code || "")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>{t("action.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={isDeleting}
@@ -462,7 +466,7 @@ export function PlantsDataTable({ gardenId }: PlantsDataTableProps) {
                 }
               }}
             >
-              {isDeleting ? "Deleting..." : "Delete"}
+              {isDeleting ? t("action.deleting") : t("action.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

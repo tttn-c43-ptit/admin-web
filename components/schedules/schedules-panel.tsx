@@ -14,16 +14,15 @@ import {
 } from "@/components/ui/card";
 import { Trash2, CalendarClock, Leaf, Droplet, Bug, Search, FileText, Pencil } from "lucide-react";
 import { ScheduleFormDialog } from "./schedule-form-dialog";
-import { getUserRole } from "@/lib/jwt";
-import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { utcToLocalCronString as formatCron } from "@/lib/cron-utils";
+import { useTranslation } from "@/components/i18n-provider";
+import { TranslationKey } from "@/lib/i18n/translations";
 
 interface SchedulesPanelProps {
   gardenId: string;
 }
-
-import { utcToLocalCronString as formatCron } from "@/lib/cron-utils";
 
 const TaskTypeIcon = ({ type }: { type: string }) => {
   switch (type) {
@@ -36,7 +35,17 @@ const TaskTypeIcon = ({ type }: { type: string }) => {
   }
 };
 
+const taskTypeKeyMap: Record<string, TranslationKey> = {
+  WATER: "taskType.WATER",
+  FERTILIZE: "taskType.FERTILIZE",
+  SPRAY: "taskType.SPRAY",
+  INSPECT: "taskType.INSPECT",
+  HARVEST: "taskType.HARVEST",
+  OTHER: "taskType.OTHER",
+};
+
 export function SchedulesPanel({ gardenId }: SchedulesPanelProps) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { data: user } = useQuery({
     queryKey: queryKeys.me(),
@@ -72,8 +81,8 @@ export function SchedulesPanel({ gardenId }: SchedulesPanelProps) {
     <Card className="mt-6">
       <CardHeader className="flex flex-row items-center justify-between pb-4">
         <div>
-          <CardTitle>Care Schedules</CardTitle>
-          <CardDescription>Manage recurring tasks for this garden</CardDescription>
+          <CardTitle>{t("schedules.panelTitle")}</CardTitle>
+          <CardDescription>{t("schedules.panelDesc")}</CardDescription>
         </div>
         <ScheduleFormDialog 
           gardenId={gardenId} 
@@ -82,10 +91,10 @@ export function SchedulesPanel({ gardenId }: SchedulesPanelProps) {
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <p className="text-sm text-muted-foreground text-center py-4">Loading schedules...</p>
+          <p className="text-sm text-muted-foreground text-center py-4">{t("schedules.loading")}</p>
         ) : !schedules || schedules.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-4">
-            No care schedules configured yet.
+            {t("schedules.noSchedules")}
           </p>
         ) : (
           <div className="space-y-4">
@@ -101,14 +110,14 @@ export function SchedulesPanel({ gardenId }: SchedulesPanelProps) {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium text-sm">
-                        {schedule.type.charAt(0).toUpperCase() + schedule.type.slice(1).toLowerCase()}
+                        {t(taskTypeKeyMap[schedule.type] || "taskType.OTHER")}
                       </span>
                       <Badge variant="outline" className="text-xs">
                         {formatCron(schedule.cron_expr)}
                       </Badge>
                       {schedule.zone_id && (
                         <Badge variant="secondary" className="text-xs max-w-[120px] truncate" title={getZoneName(schedule.zone_id)}>
-                          Zone: {getZoneName(schedule.zone_id)}
+                          {t("plants.colZone")}: {getZoneName(schedule.zone_id)}
                         </Badge>
                       )}
                     </div>
@@ -119,7 +128,7 @@ export function SchedulesPanel({ gardenId }: SchedulesPanelProps) {
                     )}
                     {schedule.next_run_at && (
                       <p className="text-xs text-muted-foreground pt-1">
-                        Next run: {format(new Date(schedule.next_run_at), "MMM d, yyyy HH:mm")}
+                        {t("schedules.nextRun")} {format(new Date(schedule.next_run_at), "MMM d, yyyy HH:mm")}
                       </p>
                     )}
                   </div>

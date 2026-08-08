@@ -3,12 +3,15 @@
 import { GardenStats } from "@/types";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { format, parseISO } from "date-fns";
+import { useTranslation } from "@/components/i18n-provider";
 
 interface WeeklyTrendChartProps {
   stats: GardenStats;
 }
 
 export function WeeklyTrendChart({ stats }: WeeklyTrendChartProps) {
+  const { t } = useTranslation();
+
   const data = stats.weekly_trend.map(point => ({
     ...point,
     displayDate: format(parseISO(point.week_start), "MMM d"),
@@ -17,14 +20,14 @@ export function WeeklyTrendChart({ stats }: WeeklyTrendChartProps) {
   if (data.length === 0) {
     return (
       <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground rounded-xl border bg-card">
-        No weekly trend data available
+        {t("chart.noWeeklyData")}
       </div>
     );
   }
 
   return (
     <div className="rounded-xl border bg-card text-card-foreground shadow-sm p-6 flex flex-col h-full">
-      <h3 className="font-semibold leading-none tracking-tight mb-6">Weekly Report Trend</h3>
+      <h3 className="font-semibold leading-none tracking-tight mb-6">{t("chart.weeklyReportTrend")}</h3>
       <div className="h-[250px] w-full mt-auto">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart
@@ -59,7 +62,7 @@ export function WeeklyTrendChart({ stats }: WeeklyTrendChartProps) {
             <Area 
               type="monotone" 
               dataKey="reports" 
-              name="Total Reports"
+              name={t("chart.totalReports")}
               stroke="#3b82f6" 
               strokeWidth={2}
               fillOpacity={1} 
@@ -68,7 +71,7 @@ export function WeeklyTrendChart({ stats }: WeeklyTrendChartProps) {
             <Area 
               type="monotone" 
               dataKey="sick" 
-              name="Sick Plants"
+              name={t("chart.sickPlants")}
               stroke="#ef4444" 
               strokeWidth={2}
               fillOpacity={0} 
@@ -77,7 +80,7 @@ export function WeeklyTrendChart({ stats }: WeeklyTrendChartProps) {
             <Area 
               type="monotone" 
               dataKey="watching" 
-              name="Watching"
+              name={t("chart.watching")}
               stroke="#f59e0b" 
               strokeWidth={2}
               fillOpacity={0} 

@@ -28,6 +28,7 @@ import { Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { PaginatedResponse, Plant, Zone } from "@/types";
 import { queryKeys } from "@/lib/query-keys";
+import { useTranslation } from "@/components/i18n-provider";
 
 const formSchema = z.object({
   plant_id: z.string().min(1, "Plant is required"),
@@ -52,10 +53,9 @@ export function HarvestFormDialog({
   gardenId,
   onSuccess,
 }: HarvestFormDialogProps) {
+  const { t } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Note: For a real app with thousands of plants, this should be an async search input.
-  // For now, we'll fetch the first 100 plants in the garden as a simple select list.
   const { data: plantsData } = useQuery({
     queryKey: ["plants", gardenId, "list-all"],
     queryFn: () =>
@@ -70,7 +70,7 @@ export function HarvestFormDialog({
   });
 
   const getZoneName = (zoneId: string | null) => {
-    if (!zoneId) return "None";
+    if (!zoneId) return t("createPlant.noneZone");
     const zone = zones?.find(z => z.id === zoneId);
     return zone ? zone.name : zoneId.substring(0,8) + "...";
   };
@@ -111,7 +111,7 @@ export function HarvestFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Record Harvest</DialogTitle>
+          <DialogTitle>{t("harvestForm.title")}</DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
@@ -121,20 +121,20 @@ export function HarvestFormDialog({
               name="plant_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Select Plant</FormLabel>
+                  <FormLabel>{t("harvestForm.selectPlantLabel")}</FormLabel>
                   <FormControl>
                     <select
                       className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                       {...field}
                     >
-                      <option value="" disabled>Select a plant...</option>
+                      <option value="" disabled>{t("harvests.selectPlantPlaceholder")}</option>
                       {plantsData?.items.map((plant) => {
                         const codeDisplay = plant.code.length === 36 && plant.code.includes("-")
                           ? `Plant #${plant.code.substring(0, 8)}`
                           : plant.code;
                         return (
                           <option key={plant.id} value={plant.id}>
-                            {codeDisplay} (Zone: {getZoneName(plant.zone_id)})
+                            {codeDisplay} ({t("plants.colZone")}: {getZoneName(plant.zone_id)})
                           </option>
                         );
                       })}
@@ -150,7 +150,7 @@ export function HarvestFormDialog({
               name="quantity_kg"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Quantity (kg)</FormLabel>
+                  <FormLabel>{t("harvestForm.quantityLabel")}</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
@@ -177,9 +177,9 @@ export function HarvestFormDialog({
                 name="quality"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Quality (Optional)</FormLabel>
+                    <FormLabel>{t("harvestForm.qualityLabel")}</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g. Grade A" {...field} />
+                      <Input placeholder={t("harvestForm.qualityPlaceholder")} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -190,9 +190,9 @@ export function HarvestFormDialog({
                 name="season"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Season (Optional)</FormLabel>
+                    <FormLabel>{t("harvestForm.seasonLabel")}</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g. Summer 2026" {...field} />
+                      <Input placeholder={t("harvestForm.seasonPlaceholder")} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -205,7 +205,7 @@ export function HarvestFormDialog({
               name="harvested_at"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Harvest Date</FormLabel>
+                  <FormLabel>{t("harvestForm.harvestDateLabel")}</FormLabel>
                   <FormControl>
                     <Input type="date" {...field} />
                   </FormControl>
@@ -216,16 +216,16 @@ export function HarvestFormDialog({
 
             <div className="flex justify-end pt-4">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="mr-2">
-                Cancel
+                {t("action.cancel")}
               </Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Recording...
+                    {t("action.saving")}
                   </>
                 ) : (
-                  "Record Harvest"
+                  t("harvestForm.submitRecord")
                 )}
               </Button>
             </div>

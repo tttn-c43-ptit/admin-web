@@ -27,6 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Controller } from "react-hook-form";
+import { useTranslation } from "@/components/i18n-provider";
 
 const formSchema = z.object({
   code_prefix: z.string().min(1, "Prefix is required").max(12, "Max 12 chars"),
@@ -53,6 +54,7 @@ export function BulkGenerateDialog({
   onSuccess,
   zonesData,
 }: BulkGenerateDialogProps) {
+  const { t } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
@@ -99,23 +101,23 @@ export function BulkGenerateDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Bulk Generate Plants</DialogTitle>
+          <DialogTitle>{t("bulkPlant.title")}</DialogTitle>
           <DialogDescription>
-            Generate multiple plants with sequential codes (e.g. SR-001, SR-002) at once.
+            {t("bulkPlant.subtitle")}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="code_prefix">Code Prefix</Label>
-            <Input id="code_prefix" placeholder="e.g. SR-K01" {...register("code_prefix")} />
+            <Label htmlFor="code_prefix">{t("bulkPlant.prefixLabel")}</Label>
+            <Input id="code_prefix" placeholder={t("bulkPlant.prefixPlaceholder")} {...register("code_prefix")} />
             {errors.code_prefix && (
               <p className="text-sm text-destructive">{errors.code_prefix.message}</p>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="count">Count (max 500)</Label>
+            <Label htmlFor="count">{t("bulkPlant.countLabel")}</Label>
             <Input id="count" type="number" placeholder="10" {...register("count")} />
             {errors.count && (
               <p className="text-sm text-destructive">{errors.count.message}</p>
@@ -123,7 +125,7 @@ export function BulkGenerateDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="start_index">Start Index</Label>
+            <Label htmlFor="start_index">{t("bulkPlant.startIndexLabel")}</Label>
             <Input id="start_index" type="number" placeholder="1" {...register("start_index")} />
             {errors.start_index && (
               <p className="text-sm text-destructive">{errors.start_index.message}</p>
@@ -131,14 +133,14 @@ export function BulkGenerateDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="zone_id">Zone (Optional)</Label>
+            <Label htmlFor="zone_id">{t("createPlant.zoneLabel")}</Label>
             <Controller
               control={control}
               name="zone_id"
               render={({ field }) => (
                 <Select value={field.value || null} onValueChange={field.onChange}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a zone">
+                    <SelectValue placeholder={t("createPlant.selectZone")}>
                       {zonesData?.find((z) => z.id === field.value)?.name}
                     </SelectValue>
                   </SelectTrigger>
@@ -158,7 +160,7 @@ export function BulkGenerateDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="planted_at">Planted At (Optional)</Label>
+            <Label htmlFor="planted_at">{t("createPlant.plantedAtLabel")}</Label>
             <Input id="planted_at" type="date" {...register("planted_at")} />
             {errors.planted_at && (
               <p className="text-sm text-destructive">{errors.planted_at.message}</p>
@@ -172,11 +174,11 @@ export function BulkGenerateDialog({
               onClick={() => onOpenChange(false)}
               disabled={isSubmitting}
             >
-              Cancel
+              {t("action.cancel")}
             </Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Generate
+              {t("bulkPlant.submitButton")}
             </Button>
           </DialogFooter>
         </form>

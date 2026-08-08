@@ -49,6 +49,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Plus, ArrowRight, MoreHorizontal, Edit, Trash2 } from "lucide-react";
+import { useTranslation } from "@/components/i18n-provider";
 
 const createGardenSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -59,6 +60,7 @@ const createGardenSchema = z.object({
 type CreateGardenFormValues = z.infer<typeof createGardenSchema>;
 
 export default function GardensPage() {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [page, setPage] = useState(0);
   const limit = 10;
@@ -139,19 +141,19 @@ export default function GardensPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Gardens</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("gardens.title")}</h1>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger render={<Button />}>
             <Plus className="h-4 w-4 mr-2" />
-            New Garden
+            {t("gardens.addGarden")}
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Create New Garden</DialogTitle>
+              <DialogTitle>{t("gardens.createNew")}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit(onSubmitCreate)} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
+                <Label htmlFor="name">{t("gardens.nameLabel")}</Label>
                 <Input
                   id="name"
                   {...register("name")}
@@ -162,7 +164,7 @@ export default function GardensPage() {
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="address">Address</Label>
+                <Label htmlFor="address">{t("gardens.addressLabel")}</Label>
                 <Input
                   id="address"
                   {...register("address")}
@@ -175,7 +177,7 @@ export default function GardensPage() {
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="plant_type">Plant Type</Label>
+                <Label htmlFor="plant_type">{t("gardens.plantTypeLabel")}</Label>
                 <Input
                   id="plant_type"
                   {...register("plant_type")}
@@ -193,10 +195,10 @@ export default function GardensPage() {
                   variant="outline"
                   onClick={() => setOpen(false)}
                 >
-                  Cancel
+                  {t("action.cancel")}
                 </Button>
                 <Button type="submit" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? "Creating..." : "Create"}
+                  {createMutation.isPending ? t("action.creating") : t("action.create")}
                 </Button>
               </div>
             </form>
@@ -206,30 +208,30 @@ export default function GardensPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>All Gardens</CardTitle>
+          <CardTitle>{t("gardens.allGardens")}</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Plant Type</TableHead>
-                <TableHead>Address</TableHead>
-                <TableHead>Area (m²)</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{t("gardens.colName")}</TableHead>
+                <TableHead>{t("gardens.colPlantType")}</TableHead>
+                <TableHead>{t("gardens.colAddress")}</TableHead>
+                <TableHead>{t("gardens.colArea")}</TableHead>
+                <TableHead className="text-right">{t("gardens.colActions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-8">
-                    Loading gardens...
+                    {t("dashboard.loadingGardens")}
                   </TableCell>
                 </TableRow>
               ) : data?.items.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-8">
-                    No gardens found. Create one to get started.
+                    {t("gardens.noGardens")}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -251,22 +253,22 @@ export default function GardensPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuGroup>
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuLabel>{t("gardens.colActions")}</DropdownMenuLabel>
                             <DropdownMenuItem render={<Link href={`/gardens/${garden.id}`} />}>
                               <ArrowRight className="mr-2 h-4 w-4" />
-                              View Details
+                              {t("gardens.viewDetails")}
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => setGardenToEdit(garden)}>
                               <Edit className="mr-2 h-4 w-4" />
-                              Edit Garden
+                              {t("gardens.editGarden")}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               className="text-destructive focus:text-destructive"
                               onClick={() => setGardenToDelete(garden)}
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
-                              Delete Garden
+                              {t("gardens.deleteGarden")}
                             </DropdownMenuItem>
                           </DropdownMenuGroup>
                         </DropdownMenuContent>
@@ -286,10 +288,10 @@ export default function GardensPage() {
                 disabled={page === 0}
                 onClick={() => setPage((p) => p - 1)}
               >
-                Previous
+                {t("action.previous")}
               </Button>
               <span className="text-sm text-muted-foreground">
-                Page {page + 1} of {Math.ceil(data.total / limit)}
+                {t("action.pageOf").replace("{current}", (page + 1).toString()).replace("{total}", Math.ceil(data.total / limit).toString())}
               </span>
               <Button
                 variant="outline"
@@ -297,7 +299,7 @@ export default function GardensPage() {
                 disabled={(page + 1) * limit >= data.total}
                 onClick={() => setPage((p) => p + 1)}
               >
-                Next
+                {t("action.next")}
               </Button>
             </div>
           )}
@@ -308,11 +310,11 @@ export default function GardensPage() {
       <Dialog open={!!gardenToEdit} onOpenChange={(val: boolean) => !val && setGardenToEdit(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Garden</DialogTitle>
+            <DialogTitle>{t("gardens.editGarden")}</DialogTitle>
           </DialogHeader>
           <form onSubmit={editForm.handleSubmit(onSubmitEdit)} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-name">Name</Label>
+              <Label htmlFor="edit-name">{t("gardens.nameLabel")}</Label>
               <Input
                 id="edit-name"
                 {...editForm.register("name")}
@@ -323,7 +325,7 @@ export default function GardensPage() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-address">Address</Label>
+              <Label htmlFor="edit-address">{t("gardens.addressLabel")}</Label>
               <Input
                 id="edit-address"
                 {...editForm.register("address")}
@@ -336,7 +338,7 @@ export default function GardensPage() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-plant_type">Plant Type</Label>
+              <Label htmlFor="edit-plant_type">{t("gardens.plantTypeLabel")}</Label>
               <Input
                 id="edit-plant_type"
                 {...editForm.register("plant_type")}
@@ -354,10 +356,10 @@ export default function GardensPage() {
                 variant="outline"
                 onClick={() => setGardenToEdit(null)}
               >
-                Cancel
+                {t("action.cancel")}
               </Button>
               <Button type="submit" disabled={updateMutation.isPending}>
-                {updateMutation.isPending ? "Saving..." : "Save Changes"}
+                {updateMutation.isPending ? t("action.saving") : t("action.save")}
               </Button>
             </div>
           </form>
@@ -368,21 +370,19 @@ export default function GardensPage() {
       <AlertDialog open={!!gardenToDelete} onOpenChange={(val: boolean) => !val && setGardenToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogTitle>{t("gardens.deleteConfirmTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the garden
-              <strong className="text-foreground"> {gardenToDelete?.name} </strong>
-              and all of its associated zones, plants, tasks, and data from our servers.
+              {t("gardens.deleteConfirmDesc").replace("{name}", gardenToDelete?.name || "")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("action.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => gardenToDelete && deleteMutation.mutate(gardenToDelete.id)}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={deleteMutation.isPending}
             >
-              {deleteMutation.isPending ? "Deleting..." : "Delete Garden"}
+              {deleteMutation.isPending ? t("action.deleting") : t("gardens.deleteGarden")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -18,6 +18,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Plus, X, Pencil, UserX, UserCheck, ShieldCheck, ShieldAlert, KeyRound } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslation } from "@/components/i18n-provider";
 
 interface StaffUser {
   id: string;
@@ -31,26 +32,26 @@ interface StaffUser {
 
 const staffSchema = z
   .object({
-    full_name: z.string().min(1, "Full name is required"),
-    email: z.string().email("Invalid email address").or(z.literal("")),
+    full_name: z.string().min(1, "val.fullNameRequired"),
+    email: z.string().email("val.invalidEmail").or(z.literal("")),
     phone: z
       .string()
-      .regex(/^\+?[0-9]{8,15}$/, "Invalid phone number (8–15 digits)")
+      .regex(/^\+?[0-9]{8,15}$/, "val.invalidPhone")
       .or(z.literal("")),
-    password: z.string().min(8, "Password must be at least 8 characters"),
+    password: z.string().min(8, "val.passwordMinLength"),
   })
   .refine((data) => data.email !== "" || data.phone !== "", {
-    message: "Please provide either an email or phone number",
+    message: "val.emailOrPhoneRequired",
     path: ["email"],
   });
 
 type StaffFormValues = z.infer<typeof staffSchema>;
 
 const editStaffSchema = z.object({
-  full_name: z.string().min(1, "Full name is required"),
+  full_name: z.string().min(1, "val.fullNameRequired"),
   phone: z
     .string()
-    .regex(/^\+?[0-9]{8,15}$/, "Invalid phone number (8–15 digits)")
+    .regex(/^\+?[0-9]{8,15}$/, "val.invalidPhone")
     .or(z.literal(""))
     .nullable(),
 });
@@ -58,12 +59,13 @@ const editStaffSchema = z.object({
 type EditStaffFormValues = z.infer<typeof editStaffSchema>;
 
 const resetPasswordSchema = z.object({
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  password: z.string().min(8, "val.passwordMinLength"),
 });
 
 type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;
 
 export default function StaffPage() {
+  const { t } = useTranslation();
   const [staffList, setStaffList] = useState<StaffUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -130,15 +132,15 @@ export default function StaffPage() {
       if (values.phone) body.phone = values.phone;
 
       await api.post("api/staff", { json: body });
-      toast.success("Staff account created successfully");
+      toast.success(t("staff.createdSuccess"));
       form.reset();
       setShowForm(false);
       fetchStaff();
     } catch (err: unknown) {
       setFormError(
-        (err as Error).message || "An error occurred while creating staff.",
+        (err as Error).message || t("staff.createdError"),
       );
-      toast.error("Failed to create staff account");
+      toast.error(t("staff.createdError"));
     }
   };
 
@@ -161,11 +163,11 @@ export default function StaffPage() {
           phone: values.phone || null,
         },
       });
-      toast.success("Staff details updated");
+      toast.success(t("staff.updatedSuccess"));
       setEditingStaff(null);
       fetchStaff();
     } catch (err) {
-      toast.error("Failed to update staff details");
+      toast.error(t("staff.updatedError"));
     }
   };
 
@@ -184,11 +186,11 @@ export default function StaffPage() {
           password: values.password,
         },
       });
-      toast.success(`Password reset successfully for ${resettingStaff.full_name}`);
+      toast.success(`${t("staff.resetSuccess")} (${resettingStaff.full_name})`);
       setResettingStaff(null);
       resetPasswordForm.reset();
     } catch (err) {
-      toast.error("Failed to reset staff password");
+      toast.error(t("staff.resetError"));
     }
   };
 
@@ -196,14 +198,14 @@ export default function StaffPage() {
   const handleToggleActive = async (staff: StaffUser) => {
     try {
       if (staff.is_active) {
-        if (!confirm(`Are you sure you want to deactivate ${staff.full_name}? They will lose login access immediately.`)) return;
+        if (!confirm(t("staff.deactivateConfirm").replace("{name}", staff.full_name))) return;
         await api.delete(`api/staff/${staff.id}`);
-        toast.success(`Staff member ${staff.full_name} deactivated`);
+        toast.success(t("staff.deactivatedToast"));
       } else {
         await api.patch(`api/staff/${staff.id}`, {
           json: { is_active: true },
         });
-        toast.success(`Staff member ${staff.full_name} reactivated`);
+        toast.success(t("staff.reactivatedToast"));
       }
       fetchStaff();
     } catch (err) {
@@ -218,16 +220,16 @@ export default function StaffPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">
-            Staff Management
+            {t("staff.title")}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Manage garden crew members, permissions, and active status
+            {t("staff.subtitle")}
           </p>
         </div>
         {!showForm && (
           <Button onClick={() => setShowForm(true)}>
             <Plus className="h-4 w-4 mr-1" />
-            Add Staff
+            {t("staff.addStaff")}
           </Button>
         )}
       </div>
@@ -236,7 +238,7 @@ export default function StaffPage() {
       {showForm && (
         <div className="rounded-xl border bg-card p-6 space-y-4 shadow-sm">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">New Staff Account</h2>
+            <h2 className="text-lg font-semibold">{t("staff.newAccount")}</h2>
             <Button
               variant="ghost"
               size="icon"
@@ -261,66 +263,66 @@ export default function StaffPage() {
             className="grid gap-4 sm:grid-cols-2"
           >
             <div className="space-y-2">
-              <Label htmlFor="staff_full_name">Full Name</Label>
+              <Label htmlFor="staff_full_name">{t("staff.colFullName")}</Label>
               <Input
                 id="staff_full_name"
-                placeholder="Staff member name..."
+                placeholder={t("auth.fullNamePlaceholder")}
                 {...form.register("full_name")}
               />
               {form.formState.errors.full_name && (
                 <p className="text-sm text-destructive">
-                  {form.formState.errors.full_name.message}
+                  {t(form.formState.errors.full_name.message as any)}
                 </p>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="staff_email">Email</Label>
+              <Label htmlFor="staff_email">{t("staff.colEmail")}</Label>
               <Input
                 id="staff_email"
                 type="email"
-                placeholder="staff@email.com"
+                placeholder={t("auth.emailPlaceholder")}
                 {...form.register("email")}
               />
               {form.formState.errors.email && (
                 <p className="text-sm text-destructive">
-                  {form.formState.errors.email.message}
+                  {t(form.formState.errors.email.message as any)}
                 </p>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="staff_phone">Phone</Label>
+              <Label htmlFor="staff_phone">{t("staff.colPhone")}</Label>
               <Input
                 id="staff_phone"
-                placeholder="+84123456789"
+                placeholder={t("auth.phonePlaceholder")}
                 {...form.register("phone")}
               />
               {form.formState.errors.phone && (
                 <p className="text-sm text-destructive">
-                  {form.formState.errors.phone.message}
+                  {t(form.formState.errors.phone.message as any)}
                 </p>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="staff_password">Temporary Password</Label>
+              <Label htmlFor="staff_password">{t("staff.tempPassword")}</Label>
               <Input
                 id="staff_password"
                 type="password"
-                placeholder="At least 8 characters"
+                placeholder={t("auth.passwordPlaceholder")}
                 {...form.register("password")}
               />
               {form.formState.errors.password && (
                 <p className="text-sm text-destructive">
-                  {form.formState.errors.password.message}
+                  {t(form.formState.errors.password.message as any)}
                 </p>
               )}
             </div>
 
             <div className="sm:col-span-2">
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Creating..." : "Create Staff Account"}
+                {isSubmitting ? t("auth.loggingIn") : t("staff.newAccount")}
               </Button>
             </div>
           </form>
@@ -333,11 +335,11 @@ export default function StaffPage() {
       )}
 
       {isLoading ? (
-        <div className="text-sm text-muted-foreground">Loading staff...</div>
+        <div className="text-sm text-muted-foreground">{t("staff.loading")}</div>
       ) : staffList.length === 0 ? (
         <div className="rounded-xl border bg-card p-6">
           <p className="text-muted-foreground">
-            No staff members yet. Click &quot;Add Staff&quot; to create one.
+            {t("staff.noStaff")}
           </p>
         </div>
       ) : (
@@ -345,18 +347,18 @@ export default function StaffPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/50 text-xs uppercase text-muted-foreground">
-                <th className="px-4 py-3 text-left font-semibold">Full Name</th>
-                <th className="px-4 py-3 text-left font-semibold">Email</th>
-                <th className="px-4 py-3 text-left font-semibold">Phone</th>
-                <th className="px-4 py-3 text-left font-semibold">Status</th>
-                <th className="px-4 py-3 text-left font-semibold">Joined Date</th>
-                <th className="px-4 py-3 text-right font-semibold">Actions</th>
+                <th className="px-4 py-3 text-left font-semibold">{t("staff.colFullName")}</th>
+                <th className="px-4 py-3 text-left font-semibold">{t("staff.colEmail")}</th>
+                <th className="px-4 py-3 text-left font-semibold">{t("staff.colPhone")}</th>
+                <th className="px-4 py-3 text-left font-semibold">{t("staff.colStatus")}</th>
+                <th className="px-4 py-3 text-left font-semibold">{t("staff.colJoined")}</th>
+                <th className="px-4 py-3 text-right font-semibold">{t("staff.colActions")}</th>
               </tr>
             </thead>
             <tbody className="divide-y">
               {staffList.map((staff) => (
                 <tr key={staff.id} className="hover:bg-muted/30 transition-colors">
-                  <td className="px-4 py-3 font-medium text-gray-900">{staff.full_name}</td>
+                  <td className="px-4 py-3 font-medium text-foreground">{staff.full_name}</td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {staff.email || "—"}
                   </td>
@@ -366,11 +368,11 @@ export default function StaffPage() {
                   <td className="px-4 py-3">
                     {staff.is_active !== false ? (
                       <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-green-200 gap-1 font-normal">
-                        <ShieldCheck className="h-3 w-3" /> Active
+                        <ShieldCheck className="h-3 w-3" /> {t("staff.statusActive")}
                       </Badge>
                     ) : (
                       <Badge variant="secondary" className="bg-gray-100 text-gray-600 hover:bg-gray-100 border-gray-200 gap-1 font-normal">
-                        <ShieldAlert className="h-3 w-3 text-gray-500" /> Deactivated
+                        <ShieldAlert className="h-3 w-3 text-gray-500" /> {t("staff.statusDeactivated")}
                       </Badge>
                     )}
                   </td>
@@ -383,7 +385,7 @@ export default function StaffPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleOpenEdit(staff)}
-                        title="Edit Staff Info"
+                        title={t("action.edit")}
                       >
                         <Pencil className="h-4 w-4 text-gray-600" />
                       </Button>
@@ -391,7 +393,7 @@ export default function StaffPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleOpenResetPassword(staff)}
-                        title="Reset Password"
+                        title={t("action.reset")}
                         className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
                       >
                         <KeyRound className="h-4 w-4" />
@@ -400,7 +402,7 @@ export default function StaffPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleToggleActive(staff)}
-                        title={staff.is_active !== false ? "Deactivate Staff" : "Reactivate Staff"}
+                        title={staff.is_active !== false ? t("action.delete") : t("action.confirm")}
                         className={staff.is_active !== false ? "text-red-600 hover:text-red-700 hover:bg-red-50" : "text-green-600 hover:text-green-700 hover:bg-green-50"}
                       >
                         {staff.is_active !== false ? (
@@ -422,31 +424,31 @@ export default function StaffPage() {
       <Dialog open={!!editingStaff} onOpenChange={(open) => !open && setEditingStaff(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Edit Staff Member</DialogTitle>
+            <DialogTitle>{t("staff.editMember")}</DialogTitle>
           </DialogHeader>
           <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="edit_full_name">Full Name</Label>
+              <Label htmlFor="edit_full_name">{t("staff.colFullName")}</Label>
               <Input id="edit_full_name" {...editForm.register("full_name")} />
               {editForm.formState.errors.full_name && (
-                <p className="text-xs text-destructive">{editForm.formState.errors.full_name.message}</p>
+                <p className="text-xs text-destructive">{t(editForm.formState.errors.full_name.message as any)}</p>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit_phone">Phone Number</Label>
+              <Label htmlFor="edit_phone">{t("staff.colPhone")}</Label>
               <Input id="edit_phone" placeholder="+84123456789" {...editForm.register("phone")} />
               {editForm.formState.errors.phone && (
-                <p className="text-xs text-destructive">{editForm.formState.errors.phone.message}</p>
+                <p className="text-xs text-destructive">{t(editForm.formState.errors.phone.message as any)}</p>
               )}
             </div>
 
             <DialogFooter className="pt-2">
               <Button type="button" variant="outline" onClick={() => setEditingStaff(null)}>
-                Cancel
+                {t("action.cancel")}
               </Button>
               <Button type="submit" disabled={editForm.formState.isSubmitting}>
-                {editForm.formState.isSubmitting ? "Saving..." : "Save Changes"}
+                {editForm.formState.isSubmitting ? "..." : t("action.save")}
               </Button>
             </DialogFooter>
           </form>
@@ -459,33 +461,33 @@ export default function StaffPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-amber-700">
               <KeyRound className="h-5 w-5" />
-              Reset Staff Password
+              {t("staff.resetPassword")}
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={resetPasswordForm.handleSubmit(onResetPasswordSubmit)} className="space-y-4 py-2">
             <p className="text-sm text-muted-foreground">
-              Set a new password for staff member <span className="font-semibold text-foreground">{resettingStaff?.full_name}</span> ({resettingStaff?.email || resettingStaff?.phone}).
+              {t("staff.resetPasswordSub")} <span className="font-semibold text-foreground">{resettingStaff?.full_name}</span> ({resettingStaff?.email || resettingStaff?.phone}).
             </p>
 
             <div className="space-y-2">
-              <Label htmlFor="reset_password">New Password</Label>
+              <Label htmlFor="reset_password">{t("auth.passwordLabel")}</Label>
               <Input
                 id="reset_password"
                 type="password"
-                placeholder="At least 8 characters"
+                placeholder={t("auth.passwordPlaceholder")}
                 {...resetPasswordForm.register("password")}
               />
               {resetPasswordForm.formState.errors.password && (
-                <p className="text-xs text-destructive">{resetPasswordForm.formState.errors.password.message}</p>
+                <p className="text-xs text-destructive">{t(resetPasswordForm.formState.errors.password.message as any)}</p>
               )}
             </div>
 
             <DialogFooter className="pt-2">
               <Button type="button" variant="outline" onClick={() => setResettingStaff(null)}>
-                Cancel
+                {t("action.cancel")}
               </Button>
               <Button type="submit" className="bg-amber-600 hover:bg-amber-700 text-white" disabled={resetPasswordForm.formState.isSubmitting}>
-                {resetPasswordForm.formState.isSubmitting ? "Resetting..." : "Reset Password"}
+                {resetPasswordForm.formState.isSubmitting ? "..." : t("action.reset")}
               </Button>
             </DialogFooter>
           </form>

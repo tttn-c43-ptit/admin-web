@@ -3,16 +3,28 @@
 import { GardenStats } from "@/types";
 import { PLANT_STATUS_COLORS } from "@/components/plant-status-badge";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
+import { useTranslation } from "@/components/i18n-provider";
+import { TranslationKey } from "@/lib/i18n/translations";
 
 interface StatusBreakdownChartProps {
   stats: GardenStats;
 }
 
 export function StatusBreakdownChart({ stats }: StatusBreakdownChartProps) {
+  const { t } = useTranslation();
+
+  const statusKeyMap: Record<string, TranslationKey> = {
+    HEALTHY: "status.healthy",
+    WATCHING: "status.watching",
+    SICK: "status.sick",
+    DEAD: "status.dead",
+    UNKNOWN: "status.unknown",
+  };
+
   const data = Object.entries(stats.by_status)
     .filter(([, count]) => count > 0)
     .map(([status, count]) => ({
-      name: status,
+      name: t(statusKeyMap[status] || "status.unknown"),
       value: count,
       fill: PLANT_STATUS_COLORS[status]?.hex || PLANT_STATUS_COLORS.UNKNOWN.hex,
     }));
@@ -20,14 +32,14 @@ export function StatusBreakdownChart({ stats }: StatusBreakdownChartProps) {
   if (data.length === 0) {
     return (
       <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground rounded-xl border bg-card">
-        No plant status data available
+        {t("chart.noStatusData")}
       </div>
     );
   }
 
   return (
     <div className="rounded-xl border bg-card text-card-foreground shadow-sm p-6 flex flex-col">
-      <h3 className="font-semibold leading-none tracking-tight mb-6">Status Breakdown</h3>
+      <h3 className="font-semibold leading-none tracking-tight mb-6">{t("chart.statusBreakdown")}</h3>
       <div className="h-[250px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>

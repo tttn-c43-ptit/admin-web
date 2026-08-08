@@ -37,6 +37,7 @@ import { getUserRole } from "@/lib/jwt";
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
 import { GardenDetail, PaginatedResponse, User } from "@/types";
+import { useTranslation } from "@/components/i18n-provider";
 
 const taskSchema = z.object({
   garden_id: z.string().uuid("Please select a garden"),
@@ -65,6 +66,7 @@ export function TaskFormDialog({
   gardenId,
   trigger,
 }: TaskFormDialogProps) {
+  const { t } = useTranslation();
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = controlledOpen !== undefined ? controlledOpen : uncontrolledOpen;
   const setOpen = setControlledOpen !== undefined ? setControlledOpen : setUncontrolledOpen;
@@ -141,12 +143,6 @@ export function TaskFormDialog({
     }
   };
 
-  // Only OWNER can create tasks
-  // if (role === null) return null; // Avoid hydration mismatch or rendering before role is loaded
-  // if (role !== "OWNER" && !taskToEdit) {
-  //   return null;
-  // }
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       {!taskToEdit && (
@@ -156,7 +152,7 @@ export function TaskFormDialog({
           <DialogTrigger render={
             <Button>
               <Plus className="mr-2 h-4 w-4" />
-              Create Task
+              {t("tasks.createTask")}
             </Button>
           } />
         )
@@ -164,7 +160,7 @@ export function TaskFormDialog({
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>
-            {taskToEdit ? "Edit Task" : "Create New Task"}
+            {taskToEdit ? t("taskForm.editTitle") : t("taskForm.createTitle")}
           </DialogTitle>
         </DialogHeader>
 
@@ -176,11 +172,11 @@ export function TaskFormDialog({
                 name="garden_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Garden</FormLabel>
+                    <FormLabel>{t("taskForm.gardenLabel")}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a garden">
+                          <SelectValue placeholder={t("taskForm.selectGarden")}>
                             {field.value ? gardens.find(g => g.id === field.value)?.name : undefined}
                           </SelectValue>
                         </SelectTrigger>
@@ -188,7 +184,7 @@ export function TaskFormDialog({
                       <SelectContent>
                         {gardens.length === 0 ? (
                           <SelectItem value="empty" disabled>
-                            No gardens found or loading...
+                            {t("dashboard.noGardensPrompt")}
                           </SelectItem>
                         ) : (
                           gardens.map((g) => (
@@ -210,23 +206,23 @@ export function TaskFormDialog({
               name="type"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Task Type</FormLabel>
+                  <FormLabel>{t("taskForm.typeLabel")}</FormLabel>
                   <Select
                     onValueChange={field.onChange}
                     value={field.value}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a task type" />
+                        <SelectValue placeholder={t("taskForm.selectType")} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="WATER">Water</SelectItem>
-                      <SelectItem value="FERTILIZE">Fertilize</SelectItem>
-                      <SelectItem value="SPRAY">Spray</SelectItem>
-                      <SelectItem value="INSPECT">Inspect</SelectItem>
-                      <SelectItem value="HARVEST">Harvest</SelectItem>
-                      <SelectItem value="OTHER">Other</SelectItem>
+                      <SelectItem value="WATER">{t("taskType.WATER")}</SelectItem>
+                      <SelectItem value="FERTILIZE">{t("taskType.FERTILIZE")}</SelectItem>
+                      <SelectItem value="SPRAY">{t("taskType.SPRAY")}</SelectItem>
+                      <SelectItem value="INSPECT">{t("taskType.INSPECT")}</SelectItem>
+                      <SelectItem value="HARVEST">{t("taskType.HARVEST")}</SelectItem>
+                      <SelectItem value="OTHER">{t("taskType.OTHER")}</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -239,7 +235,7 @@ export function TaskFormDialog({
               name="due_date"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Due Date</FormLabel>
+                  <FormLabel>{t("taskForm.dueDateLabel")}</FormLabel>
                   <FormControl>
                     <Input type="datetime-local" {...field} />
                   </FormControl>
@@ -253,17 +249,17 @@ export function TaskFormDialog({
               name="assignee_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Assignee (Optional)</FormLabel>
+                  <FormLabel>{t("taskForm.assigneeLabel")}</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value || ""}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select staff member">
+                        <SelectValue placeholder={t("taskForm.selectAssignee")}>
                           {field.value ? staffList?.find((s) => s.id === field.value)?.full_name : undefined}
                         </SelectValue>
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">Unassigned</SelectItem>
+                      <SelectItem value="">{t("tasks.unassigned")}</SelectItem>
                       {staffList?.map((staff) => (
                         <SelectItem key={staff.id} value={staff.id}>
                           {staff.full_name} {staff.email ? `(${staff.email})` : ""}
@@ -281,10 +277,10 @@ export function TaskFormDialog({
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description (Optional)</FormLabel>
+                  <FormLabel>{t("taskForm.descriptionLabel")}</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Add any additional details..."
+                      placeholder={t("taskForm.descPlaceholder")}
                       {...field}
                     />
                   </FormControl>
@@ -298,10 +294,10 @@ export function TaskFormDialog({
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
+                    {t("taskForm.submitSaving")}
                   </>
                 ) : (
-                  "Save Task"
+                  t("taskForm.submitSave")
                 )}
               </Button>
             </div>

@@ -27,24 +27,27 @@ import { TestScanDialog } from "@/components/dashboard/test-scan-dialog";
 import { QrCode } from "lucide-react";
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { useQueryClient } from "@tanstack/react-query";
+import { LanguageToggle } from "@/components/layout/language-toggle";
+import { useTranslation } from "@/components/i18n-provider";
+import type { TranslationKey } from "@/lib/i18n/translations";
 
 interface NavItem {
   href: string;
-  label: string;
+  translationKey: TranslationKey;
   icon: typeof BarChart3;
   ownerOnly?: boolean;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { href: "/dashboard", label: "Overview", icon: BarChart3, ownerOnly: true },
-  { href: "/gardens", label: "Gardens", icon: Leaf, ownerOnly: true },
-  { href: "/plants", label: "Plants", icon: Sprout, ownerOnly: true },
-  { href: "/tasks", label: "Tasks", icon: ClipboardList },
-  { href: "/inventory", label: "Inventory", icon: Warehouse, ownerOnly: true },
-  { href: "/harvests", label: "Harvests", icon: Tractor, ownerOnly: true },
-  { href: "/trace-codes", label: "Trace Codes", icon: Search, ownerOnly: true },
-  { href: "/reports", label: "Reports", icon: BarChart3, ownerOnly: true },
-  { href: "/staff", label: "Staff", icon: Users, ownerOnly: true },
+  { href: "/dashboard", translationKey: "nav.overview", icon: BarChart3, ownerOnly: true },
+  { href: "/gardens", translationKey: "nav.gardens", icon: Leaf, ownerOnly: true },
+  { href: "/plants", translationKey: "nav.plants", icon: Sprout, ownerOnly: true },
+  { href: "/tasks", translationKey: "nav.tasks", icon: ClipboardList },
+  { href: "/inventory", translationKey: "nav.inventory", icon: Warehouse, ownerOnly: true },
+  { href: "/harvests", translationKey: "nav.harvests", icon: Tractor, ownerOnly: true },
+  { href: "/trace-codes", translationKey: "nav.traceCodes", icon: Search, ownerOnly: true },
+  { href: "/reports", translationKey: "nav.reports", icon: BarChart3, ownerOnly: true },
+  { href: "/staff", translationKey: "nav.staff", icon: Users, ownerOnly: true },
 ];
 
 interface UserData {
@@ -95,6 +98,7 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { t } = useTranslation();
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isTestScanOpen, setIsTestScanOpen] = useState(false);
   const queryClient = useQueryClient();
@@ -126,7 +130,7 @@ export default function DashboardLayout({
             <div className="bg-white overflow-hidden rounded-lg h-8 w-8 flex items-center justify-center shadow-sm border">
               <img src="/images/logo.png" alt="Logo" className="h-full w-full object-cover" />
             </div>
-            <span>PlantCare</span>
+            <span>{t("app.title")}</span>
           </Link>
         </div>
         <nav className="flex flex-col gap-1 p-4">
@@ -147,7 +151,7 @@ export default function DashboardLayout({
                 onClick={() => setSidebarOpen(false)}
               >
                 <Icon className="h-4 w-4" />
-                {item.label}
+                {t(item.translationKey)}
               </Link>
             );
           })}
@@ -171,26 +175,28 @@ export default function DashboardLayout({
               <Search className="absolute left-2 top-2 h-4 w-4 text-muted-foreground" />
               <input
                 type="search"
-                placeholder="Search..."
+                placeholder={t("topbar.search")}
                 className="h-8 w-64 rounded-md border border-input bg-transparent pl-8 pr-4 text-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
             </div>
           </div>
 
-          <div className="flex items-center gap-2 md:gap-4">
+          <div className="flex items-center gap-2 md:gap-3">
             <Button variant="outline" size="sm" onClick={() => setIsTestScanOpen(true)} className="hidden md:flex">
               <QrCode className="h-4 w-4 mr-2" />
-              Test Scan
+              {t("topbar.testScan")}
             </Button>
             <Button variant="ghost" size="icon" onClick={() => setIsTestScanOpen(true)} className="md:hidden">
               <QrCode className="h-5 w-5 text-muted-foreground" />
             </Button>
             
+            <LanguageToggle />
+
             <div className="hidden md:flex">
               <NotificationBell />
             </div>
             
-            <div className="hidden md:flex flex-col items-end ml-4 mr-2">
+            <div className="hidden md:flex flex-col items-end ml-2 mr-2">
               <span className="text-sm font-medium leading-none">{user?.full_name || "Admin"}</span>
               <span className="text-xs text-muted-foreground mt-1">{user?.email || "admin@example.com"}</span>
             </div>
@@ -203,7 +209,7 @@ export default function DashboardLayout({
               variant="ghost"
               size="icon"
               onClick={handleLogout}
-              title="Logout"
+              title={t("topbar.logout")}
             >
               <LogOut className="h-6 w-6 text-muted-foreground" />
             </Button>

@@ -12,16 +12,19 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import { useTranslation } from "@/components/i18n-provider";
 
 interface ZoneStatsChartProps {
   stats: GardenStats;
 }
 
 export function ZoneStatsChart({ stats }: ZoneStatsChartProps) {
+  const { t } = useTranslation();
+
   if (stats.by_zone.length === 0) {
     return (
       <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground rounded-xl border bg-card">
-        No zone statistics available
+        {t("chart.noZoneData")}
       </div>
     );
   }
@@ -49,7 +52,7 @@ export function ZoneStatsChart({ stats }: ZoneStatsChartProps) {
 
   return (
     <div className="rounded-xl border bg-card text-card-foreground shadow-sm p-6 flex flex-col h-full">
-      <h3 className="font-semibold leading-none tracking-tight mb-6">Zone Statistics</h3>
+      <h3 className="font-semibold leading-none tracking-tight mb-6">{t("chart.zoneStats")}</h3>
       <div className="h-[300px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
@@ -78,19 +81,19 @@ export function ZoneStatsChart({ stats }: ZoneStatsChartProps) {
             <Legend verticalAlign="top" height={36} iconType="circle" />
             
             {hasStatusData.HEALTHY && (
-              <Bar dataKey="HEALTHY" name="Healthy" stackId="a" fill={PLANT_STATUS_COLORS.HEALTHY.hex} />
+              <Bar dataKey="HEALTHY" name={t("status.healthy")} stackId="a" fill={PLANT_STATUS_COLORS.HEALTHY.hex} />
             )}
             {hasStatusData.WATCHING && (
-              <Bar dataKey="WATCHING" name="Watching" stackId="a" fill={PLANT_STATUS_COLORS.WATCHING.hex} />
+              <Bar dataKey="WATCHING" name={t("status.watching")} stackId="a" fill={PLANT_STATUS_COLORS.WATCHING.hex} />
             )}
             {hasStatusData.SICK && (
-              <Bar dataKey="SICK" name="Sick" stackId="a" fill={PLANT_STATUS_COLORS.SICK.hex} />
+              <Bar dataKey="SICK" name={t("status.sick")} stackId="a" fill={PLANT_STATUS_COLORS.SICK.hex} />
             )}
             {hasStatusData.UNKNOWN && (
-              <Bar dataKey="UNKNOWN" name="Unknown" stackId="a" fill={PLANT_STATUS_COLORS.UNKNOWN.hex} />
+              <Bar dataKey="UNKNOWN" name={t("status.unknown")} stackId="a" fill={PLANT_STATUS_COLORS.UNKNOWN.hex} />
             )}
             {hasStatusData.DEAD && (
-              <Bar dataKey="DEAD" name="Dead" stackId="a" fill={PLANT_STATUS_COLORS.DEAD.hex} />
+              <Bar dataKey="DEAD" name={t("status.dead")} stackId="a" fill={PLANT_STATUS_COLORS.DEAD.hex} />
             )}
           </BarChart>
         </ResponsiveContainer>

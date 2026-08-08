@@ -35,8 +35,10 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useTranslation } from "@/components/i18n-provider";
 
 export default function HarvestsPage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [gardenId, setGardenId] = useState<string>("");
   const [selectedPlantId, setSelectedPlantId] = useState<string>("");
@@ -92,7 +94,7 @@ export default function HarvestsPage() {
 
   // Delete Harvest (DELETE /api/harvests/{id})
   const handleDeleteHarvest = async (harvestId: string) => {
-    if (!confirm("Are you sure you want to delete this harvest record? This will reduce the garden yield totals.")) return;
+    if (!confirm(t("harvests.deleteConfirm"))) return;
     try {
       await api.delete(`api/harvests/${harvestId}`);
       toast.success("Harvest record deleted");
@@ -160,27 +162,27 @@ export default function HarvestsPage() {
   const columns: ColumnDef<Harvest>[] = [
     {
       accessorKey: "harvested_at",
-      header: "Date",
+      header: t("harvests.colDate"),
       cell: ({ row }) => format(new Date(row.original.harvested_at), "MMM d, yyyy"),
     },
     {
       accessorKey: "quantity_kg",
-      header: "Yield (kg)",
+      header: t("harvests.colYield"),
       cell: ({ row }) => <div className="font-mono font-medium text-green-700">{row.original.quantity_kg} kg</div>,
     },
     {
       accessorKey: "quality",
-      header: "Quality",
+      header: t("harvests.colQuality"),
       cell: ({ row }) => row.original.quality || "-",
     },
     {
       accessorKey: "season",
-      header: "Season",
+      header: t("harvests.colSeason"),
       cell: ({ row }) => row.original.season || "-",
     },
     {
       accessorKey: "plant_id",
-      header: "Plant Code",
+      header: t("harvests.colPlantCode"),
       cell: ({ row }) => (
         <div className="font-mono text-sm font-medium">
           {getPlantCode(row.original.plant_id)}
@@ -189,14 +191,14 @@ export default function HarvestsPage() {
     },
     {
       id: "actions",
-      header: "Actions",
+      header: t("harvests.colActions"),
       cell: ({ row }) => (
         <div className="flex items-center gap-1">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => handleOpenEdit(row.original)}
-            title="Edit Harvest Record"
+            title={t("action.edit")}
           >
             <Pencil className="h-4 w-4 text-gray-600" />
           </Button>
@@ -204,7 +206,7 @@ export default function HarvestsPage() {
             variant="ghost"
             size="sm"
             onClick={() => handleDeleteHarvest(row.original.id)}
-            title="Delete Harvest Record"
+            title={t("action.delete")}
             className="text-red-600 hover:text-red-700 hover:bg-red-50"
           >
             <Trash2 className="h-4 w-4" />
@@ -226,13 +228,13 @@ export default function HarvestsPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Harvests</h2>
-          <p className="text-muted-foreground mt-1">Track crop yields and harvest seasons</p>
+          <h2 className="text-3xl font-bold tracking-tight">{t("harvests.title")}</h2>
+          <p className="text-muted-foreground mt-1">{t("harvests.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
           <GardenSelector value={gardenId} onChange={handleGardenChange} />
           <Button onClick={() => setFormOpen(true)} disabled={!gardenId}>
-            <Plus className="mr-2 h-4 w-4" /> Record Harvest
+            <Plus className="mr-2 h-4 w-4" /> {t("harvests.addHarvest")}
           </Button>
         </div>
       </div>
@@ -249,14 +251,16 @@ export default function HarvestsPage() {
               <div className="p-3 bg-green-100 rounded-full mb-4">
                 <Tractor className="h-6 w-6 text-green-600" />
               </div>
-              <h3 className="text-sm font-medium text-muted-foreground">Total Harvested</h3>
+              <h3 className="text-sm font-medium text-muted-foreground">{t("harvests.totalHarvested")}</h3>
               <div className="text-4xl font-bold mt-1 text-green-700">{stats.total_kg.toFixed(1)} <span className="text-2xl text-muted-foreground">kg</span></div>
-              <p className="text-sm text-muted-foreground mt-2">{stats.total_records} harvest records</p>
+              <p className="text-sm text-muted-foreground mt-2">
+                {t("harvests.harvestRecordsCount").replace("{count}", String(stats.total_records))}
+              </p>
             </div>
 
             {/* By Zone Chart */}
             <div className="rounded-xl border bg-card text-card-foreground shadow-sm p-6 md:col-span-2">
-              <h3 className="font-semibold leading-none tracking-tight mb-4">Yield by Zone</h3>
+              <h3 className="font-semibold leading-none tracking-tight mb-4">{t("harvests.yieldByZone")}</h3>
               {stats.by_zone.length > 0 ? (
                 <div className="h-[200px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
@@ -265,13 +269,13 @@ export default function HarvestsPage() {
                       <XAxis type="number" hide />
                       <YAxis dataKey="zone_name" type="category" axisLine={false} tickLine={false} width={80} />
                       <RechartsTooltip cursor={{fill: 'transparent'}} contentStyle={{ borderRadius: "8px" }} />
-                      <Bar dataKey="quantity_kg" fill="#3F9142" radius={[0, 4, 4, 0]} name="Yield (kg)" barSize={24} />
+                      <Bar dataKey="quantity_kg" fill="#3F9142" radius={[0, 4, 4, 0]} name={t("harvests.colYield")} barSize={24} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
               ) : (
                 <div className="flex h-[150px] items-center justify-center text-sm text-muted-foreground">
-                  No zone yield data
+                  {t("harvests.noZoneData")}
                 </div>
               )}
             </div>
@@ -280,34 +284,34 @@ export default function HarvestsPage() {
           {/* Season & Quality Breakdowns */}
           <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
             <div className="rounded-xl border bg-card p-5">
-              <h4 className="font-semibold text-sm mb-3">Yield by Season</h4>
+              <h4 className="font-semibold text-sm mb-3">{t("harvests.yieldBySeason")}</h4>
               {stats.by_season.length > 0 ? (
                 <div className="space-y-2">
                   {stats.by_season.map((s, idx) => (
                     <div key={idx} className="flex justify-between items-center text-sm p-2 rounded bg-muted/40">
-                      <span className="font-medium">{s.season || "Unassigned"}</span>
-                      <span className="font-mono font-bold text-green-700">{s.quantity_kg} kg <span className="text-xs text-muted-foreground">({s.records} records)</span></span>
+                      <span className="font-medium">{s.season || t("harvests.unassigned")}</span>
+                      <span className="font-mono font-bold text-green-700">{s.quantity_kg} kg <span className="text-xs text-muted-foreground">({s.records} {t("harvests.harvestRecordsCount").replace("{count}", "").trim()})</span></span>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-muted-foreground">No season data recorded.</p>
+                <p className="text-xs text-muted-foreground">{t("harvests.noSeasonData")}</p>
               )}
             </div>
 
             <div className="rounded-xl border bg-card p-5">
-              <h4 className="font-semibold text-sm mb-3">Yield by Quality Grade</h4>
+              <h4 className="font-semibold text-sm mb-3">{t("harvests.yieldByQuality")}</h4>
               {stats.by_quality.length > 0 ? (
                 <div className="space-y-2">
                   {stats.by_quality.map((q, idx) => (
                     <div key={idx} className="flex justify-between items-center text-sm p-2 rounded bg-muted/40">
-                      <span className="font-medium">{q.quality || "Unassigned"}</span>
-                      <span className="font-mono font-bold text-green-700">{q.quantity_kg} kg <span className="text-xs text-muted-foreground">({q.records} records)</span></span>
+                      <span className="font-medium">{q.quality || t("harvests.unassigned")}</span>
+                      <span className="font-mono font-bold text-green-700">{q.quantity_kg} kg <span className="text-xs text-muted-foreground">({q.records} {t("harvests.harvestRecordsCount").replace("{count}", "").trim()})</span></span>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-muted-foreground">No quality grade data recorded.</p>
+                <p className="text-xs text-muted-foreground">{t("harvests.noQualityData")}</p>
               )}
             </div>
           </div>
@@ -315,9 +319,9 @@ export default function HarvestsPage() {
       ) : null}
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-2">
-        <h3 className="font-semibold text-lg">Harvest History</h3>
+        <h3 className="font-semibold text-lg">{t("harvests.historyTitle")}</h3>
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">Select Plant:</span>
+          <span className="text-sm font-medium">{t("harvests.selectPlant")}</span>
           <Select 
             value={selectedPlantId} 
             onValueChange={(val) => {
@@ -329,7 +333,7 @@ export default function HarvestsPage() {
             disabled={!gardenId}
           >
             <SelectTrigger className="w-[220px]">
-              <SelectValue placeholder={gardenId ? "Select a plant..." : "Select garden first"}>
+              <SelectValue placeholder={gardenId ? t("harvests.selectPlantPlaceholder") : t("harvests.selectGardenFirst")}>
                 {selectedPlantId ? getPlantCode(selectedPlantId) : undefined}
               </SelectValue>
             </SelectTrigger>
@@ -366,7 +370,7 @@ export default function HarvestsPage() {
             {listLoading ? (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-24 text-center">
-                  Loading...
+                  {t("harvests.loading")}
                 </TableCell>
               </TableRow>
             ) : table.getRowModel().rows?.length ? (
@@ -382,7 +386,7 @@ export default function HarvestsPage() {
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-24 text-center">
-                  No harvests recorded yet.
+                  {t("harvests.noHarvests")}
                 </TableCell>
               </TableRow>
             )}
@@ -397,7 +401,7 @@ export default function HarvestsPage() {
           onClick={() => setPageIndex((old) => Math.max(old - 1, 0))}
           disabled={pageIndex === 0 || listLoading}
         >
-          Previous
+          {t("action.previous")}
         </Button>
         <Button
           variant="outline"
@@ -405,7 +409,7 @@ export default function HarvestsPage() {
           onClick={() => setPageIndex((old) => old + 1)}
           disabled={pageIndex >= table.getPageCount() - 1 || listLoading}
         >
-          Next
+          {t("action.next")}
         </Button>
       </div>
 
@@ -428,11 +432,11 @@ export default function HarvestsPage() {
       <Dialog open={!!editingHarvest} onOpenChange={(open) => !open && setEditingHarvest(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Edit Harvest Record</DialogTitle>
+            <DialogTitle>{t("harvestForm.editTitle")}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleEditSubmit} className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="edit_quantity_kg">Yield Quantity (kg)</Label>
+              <Label htmlFor="edit_quantity_kg">{t("harvestForm.quantityLabel")}</Label>
               <Input
                 id="edit_quantity_kg"
                 type="number"
@@ -445,20 +449,20 @@ export default function HarvestsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit_quality">Quality Grade (Optional)</Label>
+              <Label htmlFor="edit_quality">{t("harvestForm.qualityLabel")}</Label>
               <Input
                 id="edit_quality"
-                placeholder="e.g. Grade A, Premium..."
+                placeholder={t("harvestForm.qualityPlaceholder")}
                 value={editQuality}
                 onChange={(e) => setEditQuality(e.target.value)}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit_season">Season (Optional)</Label>
+              <Label htmlFor="edit_season">{t("harvestForm.seasonLabel")}</Label>
               <Input
                 id="edit_season"
-                placeholder="e.g. Summer 2026, Main Harvest..."
+                placeholder={t("harvestForm.seasonPlaceholder")}
                 value={editSeason}
                 onChange={(e) => setEditSeason(e.target.value)}
               />
@@ -466,10 +470,10 @@ export default function HarvestsPage() {
 
             <DialogFooter className="pt-2">
               <Button type="button" variant="outline" onClick={() => setEditingHarvest(null)}>
-                Cancel
+                {t("action.cancel")}
               </Button>
               <Button type="submit" disabled={isUpdating}>
-                {isUpdating ? "Saving..." : "Save Changes"}
+                {isUpdating ? t("action.saving") : t("action.save")}
               </Button>
             </DialogFooter>
           </form>

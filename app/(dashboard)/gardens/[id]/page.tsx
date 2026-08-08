@@ -12,6 +12,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ZonesPanel } from "./zones-panel";
 import { SchedulesPanel } from "@/components/schedules/schedules-panel";
+import { useTranslation } from "@/components/i18n-provider";
 
 // Load GardenMap dynamically to avoid SSR issues with Leaflet
 const GardenMap = dynamic(() => import("@/components/garden-map"), {
@@ -20,13 +21,14 @@ const GardenMap = dynamic(() => import("@/components/garden-map"), {
     <div className="flex items-center justify-center h-[500px] w-full rounded-xl border bg-muted/20">
       <p className="text-muted-foreground flex items-center">
         <MapIcon className="mr-2 h-4 w-4 animate-pulse" />
-        Loading map...
+        Map...
       </p>
     </div>
   ),
 });
 
 export default function GardenDetailPage() {
+  const { t } = useTranslation();
   const params = useParams();
   const id = params.id as string;
   const router = useRouter();
@@ -50,7 +52,7 @@ export default function GardenDetailPage() {
   if (isLoading) {
     return (
       <div className="p-8 text-center text-muted-foreground">
-        Loading garden details...
+        {t("gardenDetail.loadingDetails")}
       </div>
     );
   }
@@ -58,9 +60,9 @@ export default function GardenDetailPage() {
   if (!garden) {
     return (
       <div className="p-8 text-center space-y-4">
-        <p className="text-muted-foreground">Garden not found.</p>
+        <p className="text-muted-foreground">{t("gardenDetail.notFound")}</p>
         <Button variant="outline" onClick={() => router.push("/gardens")}>
-          Back to Gardens
+          {t("gardenDetail.backToGardens")}
         </Button>
       </div>
     );
@@ -88,9 +90,9 @@ export default function GardenDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-medium">Boundary Map</h2>
+            <h2 className="text-lg font-medium">{t("gardenDetail.boundaryMap")}</h2>
             <p className="text-xs text-muted-foreground">
-              Use the tools on the left of the map to draw the garden boundary.
+              {t("gardenDetail.boundaryMapDesc")}
             </p>
           </div>
           <GardenMap
@@ -103,8 +105,8 @@ export default function GardenDetailPage() {
         <div className="lg:col-span-1">
           <Tabs defaultValue="zones" className="w-full">
             <TabsList className="w-full grid grid-cols-2">
-              <TabsTrigger value="zones">Zones</TabsTrigger>
-              <TabsTrigger value="schedules">Schedules</TabsTrigger>
+              <TabsTrigger value="zones">{t("gardenDetail.tabZones")}</TabsTrigger>
+              <TabsTrigger value="schedules">{t("gardenDetail.tabSchedules")}</TabsTrigger>
             </TabsList>
             <TabsContent value="zones" className="mt-4">
               <ZonesPanel gardenId={id} />

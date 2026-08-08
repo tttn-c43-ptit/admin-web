@@ -11,15 +11,17 @@ import { Label } from "@/components/ui/label";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { useTranslation } from "@/components/i18n-provider";
 
 const loginSchema = z.object({
-  identifier: z.string().min(1, "Please enter your username"),
-  password: z.string().min(1, "Please enter your password"),
+  identifier: z.string().min(1, "val.usernameRequired"),
+  password: z.string().min(1, "val.passwordRequired"),
 });
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [error, setError] = useState("");
 
   const form = useForm<LoginFormValues>({
@@ -36,7 +38,6 @@ export default function LoginPage() {
     try {
       const NEXT_PUBLIC_API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
       
-      // Call backend
       const res = await fetch(`${NEXT_PUBLIC_API_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -60,42 +61,46 @@ export default function LoginPage() {
   const isLoading = form.formState.isSubmitting;
 
   return (
-    <Card className="w-full max-w-sm border-border">
+    <Card className="w-full max-w-sm border-border shadow-md">
       <CardHeader>
-        <CardTitle className="text-2xl font-semibold text-primary">Login</CardTitle>
+        <CardTitle className="text-2xl font-semibold text-primary">{t("auth.loginTitle")}</CardTitle>
         <CardDescription>
-          Agricultural Plant Management System
+          {t("auth.loginSubtitle")}
         </CardDescription>
       </CardHeader>
       <form onSubmit={form.handleSubmit(onSubmit)}>
         <CardContent className="space-y-4">
           {error && <div className="text-sm text-destructive font-semibold">{error}</div>}
           <div className="space-y-2">
-            <Label htmlFor="username">Username</Label>
-            <Input id="username" placeholder="Enter username..." {...form.register("identifier")} />
+            <Label htmlFor="username">{t("auth.usernameLabel")}</Label>
+            <Input id="username" placeholder={t("auth.usernamePlaceholder")} {...form.register("identifier")} />
             {form.formState.errors.identifier && (
-              <p className="text-sm font-semibold text-destructive">{form.formState.errors.identifier.message}</p>
+              <p className="text-sm font-semibold text-destructive">
+                {t(form.formState.errors.identifier.message as any)}
+              </p>
             )}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" {...form.register("password")} />
+            <Label htmlFor="password">{t("auth.passwordLabel")}</Label>
+            <Input id="password" type="password" placeholder={t("auth.passwordPlaceholder")} {...form.register("password")} />
             {form.formState.errors.password && (
-              <p className="text-sm font-semibold text-destructive">{form.formState.errors.password.message}</p>
+              <p className="text-sm font-semibold text-destructive">
+                {t(form.formState.errors.password.message as any)}
+              </p>
             )}
           </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-4">
           <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Processing..." : "Login"}
+            {isLoading ? t("auth.loggingIn") : t("auth.loginButton")}
           </Button>
-          <p className="text-sm text-muted-foreground">
-            Don&apos;t have an account?{" "}
+          <p className="text-sm text-muted-foreground text-center">
+            {t("auth.noAccount")}{" "}
             <Link
               href="/register"
-              className="text-primary font-semibold hover:underline"
+              className="text-primary font-semibold hover:underline ml-1"
             >
-              Register
+              {t("auth.registerLink")}
             </Link>
           </p>
         </CardFooter>

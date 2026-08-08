@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { useTranslation } from "@/components/i18n-provider";
 
 const formSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
@@ -58,6 +59,7 @@ export function InventoryFormDialog({
   itemToEdit,
   onSuccess,
 }: InventoryFormDialogProps) {
+  const { t } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<FormValues>({
@@ -121,7 +123,7 @@ export function InventoryFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{itemToEdit ? "Edit Inventory Item" : "Add Inventory Item"}</DialogTitle>
+          <DialogTitle>{itemToEdit ? t("invForm.editTitle") : t("invForm.createTitle")}</DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
@@ -131,9 +133,9 @@ export function InventoryFormDialog({
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Name</FormLabel>
+                  <FormLabel>{t("invForm.nameLabel")}</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g. NPK 15-15-15" {...field} />
+                    <Input placeholder={t("invForm.namePlaceholder")} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -145,18 +147,18 @@ export function InventoryFormDialog({
               name="type"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Type</FormLabel>
+                  <FormLabel>{t("invForm.typeLabel")}</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select type" />
+                        <SelectValue placeholder={t("inventory.filterTypeLabel")} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="FERTILIZER">Fertilizer</SelectItem>
-                      <SelectItem value="PESTICIDE">Pesticide</SelectItem>
-                      <SelectItem value="TOOL">Tool</SelectItem>
-                      <SelectItem value="OTHER">Other</SelectItem>
+                      <SelectItem value="FERTILIZER">{t("invType.FERTILIZE")}</SelectItem>
+                      <SelectItem value="PESTICIDE">{t("invType.PESTICIDE")}</SelectItem>
+                      <SelectItem value="TOOL">{t("invType.TOOL")}</SelectItem>
+                      <SelectItem value="OTHER">{t("invType.OTHER")}</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -170,7 +172,7 @@ export function InventoryFormDialog({
                 name="min_quantity"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Min Quantity</FormLabel>
+                    <FormLabel>{t("invForm.minQtyLabel")}</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -195,9 +197,9 @@ export function InventoryFormDialog({
                 name="unit"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Unit (Optional)</FormLabel>
+                    <FormLabel>{t("invForm.unitLabel")}</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g. kg, liters" {...field} />
+                      <Input placeholder={t("invForm.unitPlaceholder")} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -210,7 +212,7 @@ export function InventoryFormDialog({
               name="expiry_date"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Expiry Date (Optional)</FormLabel>
+                  <FormLabel>{t("invForm.expiryLabel")}</FormLabel>
                   <FormControl>
                     <Input type="date" {...field} />
                   </FormControl>
@@ -221,16 +223,16 @@ export function InventoryFormDialog({
 
             <div className="flex justify-end pt-4">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="mr-2">
-                Cancel
+                {t("action.cancel")}
               </Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
+                    {t("action.saving")}
                   </>
                 ) : (
-                  "Save Item"
+                  t("invForm.saveButton")
                 )}
               </Button>
             </div>

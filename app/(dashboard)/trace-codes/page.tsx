@@ -32,8 +32,10 @@ import { Plus, MoreHorizontal, QrCode, Trash2, ExternalLink, Copy } from "lucide
 import { toast } from "sonner";
 import { TraceCodeFormDialog } from "@/components/trace-codes/trace-code-form-dialog";
 import Link from "next/link";
+import { useTranslation } from "@/components/i18n-provider";
 
 export default function TraceCodesPage() {
+  const { t } = useTranslation();
   const [gardenId, setGardenId] = useState<string>("");
   const [pageIndex, setPageIndex] = useState(0);
   const pageSize = 10;
@@ -48,7 +50,7 @@ export default function TraceCodesPage() {
   });
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this trace code? Consumers will no longer be able to scan it.")) return;
+    if (!confirm(t("trace.deleteConfirm"))) return;
     try {
       await api.delete(`api/trace-codes/${id}`);
       toast.success("Trace code deleted");
@@ -61,7 +63,7 @@ export default function TraceCodesPage() {
   const columns: ColumnDef<TraceCode>[] = [
     {
       accessorKey: "code",
-      header: "Code",
+      header: t("trace.colCode"),
       cell: ({ row }) => (
         <div className="font-mono font-medium text-primary">
           <Link href={`/trace/${row.original.code}`} target="_blank" className="hover:underline flex items-center gap-1">
@@ -72,12 +74,12 @@ export default function TraceCodesPage() {
     },
     {
       accessorKey: "batch_name",
-      header: "Batch Name",
+      header: t("trace.colBatchName"),
       cell: ({ row }) => row.original.batch_name || "-",
     },
     {
       accessorKey: "harvest_date",
-      header: "Harvest Date",
+      header: t("trace.colHarvestDate"),
       cell: ({ row }) => {
         const d = row.original.harvest_date;
         return d ? format(new Date(d), "MMM d, yyyy") : "-";
@@ -85,9 +87,11 @@ export default function TraceCodesPage() {
     },
     {
       accessorKey: "plant_ids",
-      header: "Plants",
+      header: t("trace.colPlants"),
       cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">{row.original.plant_ids.length} plants</span>
+        <span className="text-sm text-muted-foreground">
+          {t("trace.plantsCount").replace("{count}", String(row.original.plant_ids.length))}
+        </span>
       ),
     },
     {
@@ -102,22 +106,22 @@ export default function TraceCodesPage() {
               <MoreHorizontal className="h-4 w-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuLabel>{t("trace.colActions")}</DropdownMenuLabel>
               <DropdownMenuItem>
                 <Link href={`/trace/${item.code}`} target="_blank" className="cursor-pointer w-full flex items-center">
-                  <ExternalLink className="mr-2 h-4 w-4" /> View Public Page
+                  <ExternalLink className="mr-2 h-4 w-4" /> {t("trace.viewPublicPage")}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => {
                   navigator.clipboard.writeText(`${window.location.origin}/trace/${item.code}`);
-                  toast.success("Trace link copied to clipboard");
+                  toast.success(t("trace.linkCopied"));
                 }}
               >
-                <Copy className="mr-2 h-4 w-4" /> Copy Trace Link
+                <Copy className="mr-2 h-4 w-4" /> {t("trace.copyTraceLink")}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleDelete(item.id)} className="text-red-600">
-                <Trash2 className="mr-2 h-4 w-4" /> Delete
+                <Trash2 className="mr-2 h-4 w-4" /> {t("action.delete")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -138,13 +142,13 @@ export default function TraceCodesPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Trace Codes</h2>
-          <p className="text-muted-foreground mt-1">Generate public traceability codes for consumers</p>
+          <h2 className="text-3xl font-bold tracking-tight">{t("trace.title")}</h2>
+          <p className="text-muted-foreground mt-1">{t("trace.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
           <GardenSelector value={gardenId} onChange={setGardenId} />
           <Button onClick={() => setFormOpen(true)} disabled={!gardenId}>
-            <Plus className="mr-2 h-4 w-4" /> Generate Code
+            <Plus className="mr-2 h-4 w-4" /> {t("trace.generateCode")}
           </Button>
         </div>
       </div>
@@ -171,7 +175,7 @@ export default function TraceCodesPage() {
             {isLoading ? (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-24 text-center">
-                  Loading...
+                  {t("trace.loading")}
                 </TableCell>
               </TableRow>
             ) : table.getRowModel().rows?.length ? (
@@ -188,7 +192,7 @@ export default function TraceCodesPage() {
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-24 text-center flex-col gap-2">
                   <QrCode className="h-8 w-8 text-muted-foreground/50 mx-auto mb-2" />
-                  No trace codes generated yet.
+                  {t("trace.noCodes")}
                 </TableCell>
               </TableRow>
             )}
@@ -203,7 +207,7 @@ export default function TraceCodesPage() {
           onClick={() => setPageIndex((old) => Math.max(old - 1, 0))}
           disabled={pageIndex === 0 || isLoading}
         >
-          Previous
+          {t("action.previous")}
         </Button>
         <Button
           variant="outline"
@@ -211,7 +215,7 @@ export default function TraceCodesPage() {
           onClick={() => setPageIndex((old) => old + 1)}
           disabled={pageIndex >= table.getPageCount() - 1 || isLoading}
         >
-          Next
+          {t("action.next")}
         </Button>
       </div>
 

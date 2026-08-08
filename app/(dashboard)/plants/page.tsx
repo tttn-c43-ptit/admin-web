@@ -8,8 +8,10 @@ import { Garden, PaginatedResponse } from "@/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PlantsDataTable } from "@/components/plants/plants-data-table";
 import { Card, CardContent } from "@/components/ui/card";
+import { useTranslation } from "@/components/i18n-provider";
 
 export default function PlantsPage() {
+  const { t } = useTranslation();
   const [selectedGardenId, setSelectedGardenId] = useState<string>("");
 
   const { data: gardensData, isLoading: isLoadingGardens } = useQuery<PaginatedResponse<Garden>>({
@@ -25,17 +27,17 @@ export default function PlantsPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold tracking-tight">Plants Management</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("plants.title")}</h1>
         
         <div className="flex items-center space-x-2">
-          <span className="text-sm font-medium whitespace-nowrap">Select Garden:</span>
+          <span className="text-sm font-medium whitespace-nowrap">{t("plants.selectGarden")}</span>
           <Select
             value={selectedGardenId}
             onValueChange={(val) => val && setSelectedGardenId(val)}
             disabled={isLoadingGardens || !gardensData?.items.length}
           >
             <SelectTrigger className="w-[280px] sm:w-[320px] max-w-full">
-              <SelectValue placeholder="Select a garden">
+              <SelectValue placeholder={t("plants.selectGardenPlaceholder")}>
                 {gardensData?.items.find((g) => g.id === selectedGardenId)?.name}
               </SelectValue>
             </SelectTrigger>
@@ -53,14 +55,14 @@ export default function PlantsPage() {
       {!gardensData?.items.length && !isLoadingGardens ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center p-12 text-center">
-            <p className="text-muted-foreground mb-4">No gardens found. You need to create a garden first to manage plants.</p>
+            <p className="text-muted-foreground mb-4">{t("plants.noGardensWarning")}</p>
           </CardContent>
         </Card>
       ) : selectedGardenId ? (
         <PlantsDataTable gardenId={selectedGardenId} />
       ) : (
         <div className="p-8 text-center text-muted-foreground">
-          Loading...
+          {t("dashboard.loadingAnalytics")}
         </div>
       )}
     </div>

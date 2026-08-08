@@ -28,6 +28,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "@/components/i18n-provider";
 
 const formSchema = z.object({
   plant_ids: z.array(z.string()).min(1, "At least one plant is required"),
@@ -51,6 +52,7 @@ export function TraceCodeFormDialog({
   gardenId,
   onSuccess,
 }: TraceCodeFormDialogProps) {
+  const { t } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Fetch plants to select (max 100 per FastAPI limit schema)
@@ -68,7 +70,7 @@ export function TraceCodeFormDialog({
   });
 
   const getZoneName = (zoneId: string | null) => {
-    if (!zoneId) return "None";
+    if (!zoneId) return t("createPlant.noneZone");
     const zone = zones?.find(z => z.id === zoneId);
     return zone ? zone.name : zoneId.substring(0,8) + "...";
   };
@@ -79,7 +81,7 @@ export function TraceCodeFormDialog({
       plant_ids: [],
       batch_name: "",
       harvest_date: "",
-      public_info_str: "{\n  \"variety\": \"Arabica Catimor\",\n  \"certification\": \"VietGAP\",\n  \"care_notes\": \"Organic fertilizer only\"\n}",
+      public_info_str: "{\n  \"variety\": \"Sầu riêng Ri6\",\n  \"certification\": \"VietGAP\",\n  \"care_notes\": \"Sử dụng phân bón hữu cơ sinh học\"\n}",
     },
   });
 
@@ -120,7 +122,7 @@ export function TraceCodeFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Generate Trace Code</DialogTitle>
+          <DialogTitle>{t("traceForm.title")}</DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
@@ -130,7 +132,7 @@ export function TraceCodeFormDialog({
               name="plant_ids"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Select Plants (Multi-select)</FormLabel>
+                  <FormLabel>{t("traceForm.selectPlantsLabel")}</FormLabel>
                   <FormControl>
                     <select
                       multiple
@@ -147,14 +149,14 @@ export function TraceCodeFormDialog({
                           : plant.code;
                         return (
                           <option key={plant.id} value={plant.id} className="p-1">
-                            {codeDisplay} (Zone: {getZoneName(plant.zone_id)})
+                            {codeDisplay} ({t("plants.colZone")}: {getZoneName(plant.zone_id)})
                           </option>
                         );
                       })}
                     </select>
                   </FormControl>
                   <FormMessage />
-                  <p className="text-[10px] text-muted-foreground mt-1">Hold Ctrl/Cmd to select multiple plants</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">{t("traceForm.multiSelectHelp")}</p>
                 </FormItem>
               )}
             />
@@ -165,9 +167,9 @@ export function TraceCodeFormDialog({
                 name="batch_name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Batch Name (Optional)</FormLabel>
+                    <FormLabel>{t("traceForm.batchNameLabel")}</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g. Summer Batch" {...field} />
+                      <Input placeholder={t("traceForm.batchNamePlaceholder")} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -178,7 +180,7 @@ export function TraceCodeFormDialog({
                 name="harvest_date"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Harvest Date (Optional)</FormLabel>
+                    <FormLabel>{t("traceForm.harvestDateLabel")}</FormLabel>
                     <FormControl>
                       <Input type="date" {...field} />
                     </FormControl>
@@ -193,7 +195,7 @@ export function TraceCodeFormDialog({
               name="public_info_str"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Public Info (JSON)</FormLabel>
+                  <FormLabel>{t("traceForm.publicInfoLabel")}</FormLabel>
                   <FormControl>
                     <Textarea 
                       {...field}
@@ -201,23 +203,23 @@ export function TraceCodeFormDialog({
                     />
                   </FormControl>
                   <FormMessage />
-                  <p className="text-[10px] text-muted-foreground">This information will be displayed directly to consumers.</p>
+                  <p className="text-[10px] text-muted-foreground">{t("traceForm.publicInfoHelp")}</p>
                 </FormItem>
               )}
             />
 
             <div className="flex justify-end pt-4">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="mr-2">
-                Cancel
+                {t("action.cancel")}
               </Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Generating...
+                    {t("traceForm.submitting")}
                   </>
                 ) : (
-                  "Generate"
+                  t("traceForm.submitGenerate")
                 )}
               </Button>
             </div>

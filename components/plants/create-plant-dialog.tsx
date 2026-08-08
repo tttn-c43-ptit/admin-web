@@ -26,6 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useTranslation } from "@/components/i18n-provider";
 
 const formSchema = z.object({
   code: z.string().min(1, "Code is required").max(16, "Max 16 chars"),
@@ -53,6 +54,7 @@ export function CreatePlantDialog({
   onSuccess,
   zonesData,
 }: CreatePlantDialogProps) {
+  const { t } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
@@ -98,37 +100,37 @@ export function CreatePlantDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Create Plant</DialogTitle>
+          <DialogTitle>{t("createPlant.title")}</DialogTitle>
           <DialogDescription>
-            Add a single new plant to the garden manually.
+            {t("createPlant.subtitle")}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="code">Plant Code</Label>
-            <Input id="code" placeholder="e.g. SR-001" {...register("code")} />
+            <Label htmlFor="code">{t("createPlant.codeLabel")}</Label>
+            <Input id="code" placeholder={t("createPlant.codePlaceholder")} {...register("code")} />
             {errors.code && (
               <p className="text-sm text-destructive">{errors.code.message}</p>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="status">Status</Label>
+            <Label htmlFor="status">{t("createPlant.statusLabel")}</Label>
             <Controller
               control={control}
               name="status"
               render={({ field }) => (
                 <Select value={field.value} onValueChange={field.onChange}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select status" />
+                    <SelectValue placeholder={t("createPlant.selectStatus")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="UNKNOWN">Unknown</SelectItem>
-                    <SelectItem value="HEALTHY">Healthy</SelectItem>
-                    <SelectItem value="WATCHING">Watching</SelectItem>
-                    <SelectItem value="SICK">Sick</SelectItem>
-                    <SelectItem value="DEAD">Dead</SelectItem>
+                    <SelectItem value="UNKNOWN">{t("status.unknown")}</SelectItem>
+                    <SelectItem value="HEALTHY">{t("status.healthy")}</SelectItem>
+                    <SelectItem value="WATCHING">{t("status.watching")}</SelectItem>
+                    <SelectItem value="SICK">{t("status.sick")}</SelectItem>
+                    <SelectItem value="DEAD">{t("status.dead")}</SelectItem>
                   </SelectContent>
                 </Select>
               )}
@@ -136,19 +138,19 @@ export function CreatePlantDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="zone_id">Zone (Optional)</Label>
+            <Label htmlFor="zone_id">{t("createPlant.zoneLabel")}</Label>
             <Controller
               control={control}
               name="zone_id"
               render={({ field }) => (
                 <Select value={field.value || ""} onValueChange={field.onChange}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a zone">
-                      {field.value ? zonesData?.find(z => z.id === field.value)?.name : "Select a zone"}
+                    <SelectValue placeholder={t("createPlant.selectZone")}>
+                      {field.value ? zonesData?.find(z => z.id === field.value)?.name : t("createPlant.selectZone")}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="">{t("createPlant.noneZone")}</SelectItem>
                     {zonesData?.map((zone) => (
                       <SelectItem key={zone.id} value={zone.id}>
                         {zone.name}
@@ -162,17 +164,17 @@ export function CreatePlantDialog({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="grid_x">Grid X (Optional)</Label>
-              <Input id="grid_x" type="number" step="any" placeholder="X coordinate" {...register("grid_x")} />
+              <Label htmlFor="grid_x">{t("createPlant.gridXLabel")}</Label>
+              <Input id="grid_x" type="number" step="any" placeholder={t("createPlant.gridXPlaceholder")} {...register("grid_x")} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="grid_y">Grid Y (Optional)</Label>
-              <Input id="grid_y" type="number" step="any" placeholder="Y coordinate" {...register("grid_y")} />
+              <Label htmlFor="grid_y">{t("createPlant.gridYLabel")}</Label>
+              <Input id="grid_y" type="number" step="any" placeholder={t("createPlant.gridYPlaceholder")} {...register("grid_y")} />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="planted_at">Planted At (Optional)</Label>
+            <Label htmlFor="planted_at">{t("createPlant.plantedAtLabel")}</Label>
             <Input id="planted_at" type="date" {...register("planted_at")} />
             {errors.planted_at && (
               <p className="text-sm text-destructive">{errors.planted_at.message}</p>
@@ -181,11 +183,11 @@ export function CreatePlantDialog({
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              {t("action.cancel")}
             </Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Create Plant
+              {t("createPlant.submitButton")}
             </Button>
           </DialogFooter>
         </form>

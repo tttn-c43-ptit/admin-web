@@ -17,24 +17,25 @@ import { Label } from "@/components/ui/label";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { useTranslation } from "@/components/i18n-provider";
 
 const registerSchema = z
   .object({
-    full_name: z.string().min(1, "Full name is required"),
-    email: z.string().email("Invalid email address").or(z.literal("")),
+    full_name: z.string().min(1, "val.fullNameRequired"),
+    email: z.string().email("val.invalidEmail").or(z.literal("")),
     phone: z
       .string()
-      .regex(/^\+?[0-9]{8,15}$/, "Invalid phone number (8–15 digits)")
+      .regex(/^\+?[0-9]{8,15}$/, "val.invalidPhone")
       .or(z.literal("")),
-    password: z.string().min(8, "Password must be at least 8 characters"),
-    confirm_password: z.string().min(1, "Please confirm your password"),
+    password: z.string().min(8, "val.passwordMinLength"),
+    confirm_password: z.string().min(1, "val.passwordRequired"),
   })
   .refine((data) => data.password === data.confirm_password, {
-    message: "Passwords do not match",
+    message: "val.passwordMismatch",
     path: ["confirm_password"],
   })
   .refine((data) => data.email !== "" || data.phone !== "", {
-    message: "Please provide either an email or phone number",
+    message: "val.emailOrPhoneRequired",
     path: ["email"],
   });
 
@@ -42,6 +43,7 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [error, setError] = useState("");
 
   const form = useForm<RegisterFormValues>({
@@ -95,13 +97,13 @@ export default function RegisterPage() {
   const isLoading = form.formState.isSubmitting;
 
   return (
-    <Card className="w-full max-w-sm border-border">
+    <Card className="w-full max-w-sm border-border shadow-md">
       <CardHeader>
         <CardTitle className="text-2xl font-semibold text-primary">
-          Register
+          {t("auth.registerTitle")}
         </CardTitle>
         <CardDescription>
-          Create an owner account to get started
+          {t("auth.registerSubtitle")}
         </CardDescription>
       </CardHeader>
       <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -113,89 +115,89 @@ export default function RegisterPage() {
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="full_name">Full Name</Label>
+            <Label htmlFor="full_name">{t("auth.fullNameLabel")}</Label>
             <Input
               id="full_name"
-              placeholder="Enter your full name..."
+              placeholder={t("auth.fullNamePlaceholder")}
               {...form.register("full_name")}
             />
             {form.formState.errors.full_name && (
-              <p className="text-sm text-destructive">
-                {form.formState.errors.full_name.message}
+              <p className="text-sm text-destructive font-semibold">
+                {t(form.formState.errors.full_name.message as any)}
               </p>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{t("auth.emailLabel")}</Label>
             <Input
               id="email"
               type="email"
-              placeholder="your@email.com"
+              placeholder={t("auth.emailPlaceholder")}
               {...form.register("email")}
             />
             {form.formState.errors.email && (
-              <p className="text-sm text-destructive">
-                {form.formState.errors.email.message}
+              <p className="text-sm text-destructive font-semibold">
+                {t(form.formState.errors.email.message as any)}
               </p>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="phone">Phone</Label>
+            <Label htmlFor="phone">{t("auth.phoneLabel")}</Label>
             <Input
               id="phone"
-              placeholder="+84123456789"
+              placeholder={t("auth.phonePlaceholder")}
               {...form.register("phone")}
             />
             {form.formState.errors.phone && (
-              <p className="text-sm text-destructive">
-                {form.formState.errors.phone.message}
+              <p className="text-sm text-destructive font-semibold">
+                {t(form.formState.errors.phone.message as any)}
               </p>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">{t("auth.passwordLabel")}</Label>
             <Input
               id="password"
               type="password"
-              placeholder="At least 8 characters"
+              placeholder={t("auth.passwordPlaceholder")}
               {...form.register("password")}
             />
             {form.formState.errors.password && (
-              <p className="text-sm text-destructive">
-                {form.formState.errors.password.message}
+              <p className="text-sm text-destructive font-semibold">
+                {t(form.formState.errors.password.message as any)}
               </p>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="confirm_password">Confirm Password</Label>
+            <Label htmlFor="confirm_password">{t("auth.confirmPasswordLabel")}</Label>
             <Input
               id="confirm_password"
               type="password"
-              placeholder="Re-enter your password"
+              placeholder={t("auth.confirmPasswordPlaceholder")}
               {...form.register("confirm_password")}
             />
             {form.formState.errors.confirm_password && (
-              <p className="text-sm text-destructive">
-                {form.formState.errors.confirm_password.message}
+              <p className="text-sm text-destructive font-semibold">
+                {t(form.formState.errors.confirm_password.message as any)}
               </p>
             )}
           </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-4">
           <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Processing..." : "Register"}
+            {isLoading ? t("auth.registering") : t("auth.registerButton")}
           </Button>
-          <p className="text-sm text-muted-foreground">
-            Already have an account?{" "}
+          <p className="text-sm text-muted-foreground text-center">
+            {t("auth.hasAccount")}{" "}
             <Link
               href="/login"
-              className="text-primary font-semibold hover:underline"
+              className="text-primary font-semibold hover:underline ml-1"
             >
-              Login
+              {t("auth.loginLink")}
             </Link>
           </p>
         </CardFooter>

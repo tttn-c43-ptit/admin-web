@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { useTranslation } from "@/components/i18n-provider";
 
 const formSchema = z.object({
   direction: z.enum(["IN", "OUT"]),
@@ -53,6 +54,7 @@ export function TransactionDialog({
   onOpenChange,
   onSuccess,
 }: TransactionDialogProps) {
+  const { t } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<FormValues>({
@@ -107,13 +109,13 @@ export function TransactionDialog({
     <Dialog open={!!item} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Stock Transaction: {item?.name}</DialogTitle>
+          <DialogTitle>{t("txDialog.title")} {item?.name}</DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
             <div className="bg-muted/50 p-3 rounded-md mb-4 flex justify-between items-center text-sm">
-              <span className="text-muted-foreground">Current Stock:</span>
+              <span className="text-muted-foreground">{t("txDialog.currentStock")}</span>
               <span className="font-mono font-medium">{item?.quantity} {item?.unit || ""}</span>
             </div>
 
@@ -123,7 +125,7 @@ export function TransactionDialog({
                 name="direction"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Direction</FormLabel>
+                    <FormLabel>{t("txDialog.directionLabel")}</FormLabel>
                     <Select 
                       onValueChange={(val) => {
                         field.onChange(val);
@@ -137,8 +139,8 @@ export function TransactionDialog({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="IN">Add Stock (IN)</SelectItem>
-                        <SelectItem value="OUT">Withdraw (OUT)</SelectItem>
+                        <SelectItem value="IN">{t("txDialog.in")}</SelectItem>
+                        <SelectItem value="OUT">{t("txDialog.out")}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -151,7 +153,7 @@ export function TransactionDialog({
                 name="quantity"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Quantity</FormLabel>
+                    <FormLabel>{t("txDialog.quantityLabel")}</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <Input
@@ -186,10 +188,10 @@ export function TransactionDialog({
               name="note"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Note (Optional)</FormLabel>
+                  <FormLabel>{t("txDialog.noteLabel")}</FormLabel>
                   <FormControl>
                     <Textarea 
-                      placeholder="e.g. Received from supplier, used for Zone A..."
+                      placeholder={t("txDialog.notePlaceholder")}
                       className="resize-none"
                       {...field}
                     />
@@ -201,13 +203,13 @@ export function TransactionDialog({
 
             <div className="flex justify-end pt-4">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="mr-2">
-                Cancel
+                {t("action.cancel")}
               </Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : null}
-                Record
+                {t("txDialog.recordButton")}
               </Button>
             </div>
           </form>

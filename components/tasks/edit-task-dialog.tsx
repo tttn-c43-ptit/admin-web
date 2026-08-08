@@ -28,7 +28,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
-import { getUserRole } from "@/lib/jwt";
+import { useTranslation } from "@/components/i18n-provider";
 
 const taskSchema = z.object({
   type: z.enum(["WATER", "FERTILIZE", "SPRAY", "INSPECT", "HARVEST", "OTHER"]),
@@ -53,12 +53,8 @@ export function EditTaskDialog({
   task,
   onSuccess,
 }: EditTaskDialogProps) {
+  const { t } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [userRole, setUserRole] = useState<string | null>(null);
-
-  useEffect(() => {
-    setUserRole(getUserRole());
-  }, []);
 
   // Fetch staff for assignment
   const { data: staffList } = useQuery<User[]>({
@@ -132,27 +128,27 @@ export function EditTaskDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Edit Task</DialogTitle>
+          <DialogTitle>{t("taskForm.editTitle")}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-4">
           <div className="space-y-2">
-            <Label>Type</Label>
+            <Label>{t("taskForm.typeLabel")}</Label>
             <Controller
               control={control}
               name="type"
               render={({ field }) => (
                 <Select onValueChange={field.onChange} value={field.value}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select type" />
+                    <SelectValue placeholder={t("taskForm.selectType")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="WATER">Water</SelectItem>
-                    <SelectItem value="FERTILIZE">Fertilize</SelectItem>
-                    <SelectItem value="SPRAY">Spray</SelectItem>
-                    <SelectItem value="INSPECT">Inspect</SelectItem>
-                    <SelectItem value="HARVEST">Harvest</SelectItem>
-                    <SelectItem value="OTHER">Other</SelectItem>
+                    <SelectItem value="WATER">{t("taskType.WATER")}</SelectItem>
+                    <SelectItem value="FERTILIZE">{t("taskType.FERTILIZE")}</SelectItem>
+                    <SelectItem value="SPRAY">{t("taskType.SPRAY")}</SelectItem>
+                    <SelectItem value="INSPECT">{t("taskType.INSPECT")}</SelectItem>
+                    <SelectItem value="HARVEST">{t("taskType.HARVEST")}</SelectItem>
+                    <SelectItem value="OTHER">{t("taskType.OTHER")}</SelectItem>
                   </SelectContent>
                 </Select>
               )}
@@ -161,20 +157,20 @@ export function EditTaskDialog({
           </div>
           
           <div className="space-y-2">
-            <Label>Status</Label>
+            <Label>{t("tasks.colStatus")}</Label>
             <Controller
               control={control}
               name="status"
               render={({ field }) => (
                 <Select onValueChange={field.onChange} value={field.value}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select status" />
+                    <SelectValue placeholder={t("plants.colStatus")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="PENDING">Pending</SelectItem>
-                    <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
-                    <SelectItem value="DONE">Done</SelectItem>
-                    <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                    <SelectItem value="PENDING">{t("taskStatus.PENDING")}</SelectItem>
+                    <SelectItem value="IN_PROGRESS">{t("taskStatus.IN_PROGRESS")}</SelectItem>
+                    <SelectItem value="DONE">{t("taskStatus.DONE")}</SelectItem>
+                    <SelectItem value="CANCELLED">{t("taskStatus.CANCELLED")}</SelectItem>
                   </SelectContent>
                 </Select>
               )}
@@ -183,17 +179,17 @@ export function EditTaskDialog({
           </div>
 
           <div className="space-y-2">
-            <Label>Description</Label>
+            <Label>{t("taskForm.descriptionLabel")}</Label>
             <Textarea
               {...register("description")}
-              placeholder="Task details..."
+              placeholder={t("taskForm.descPlaceholder")}
               className="resize-none"
             />
             {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
           </div>
 
           <div className="space-y-2">
-            <Label>Due Date (Optional)</Label>
+            <Label>{t("taskForm.dueDateLabel")}</Label>
             <Input
               type="datetime-local"
               {...register("due_date")}
@@ -202,19 +198,19 @@ export function EditTaskDialog({
           </div>
 
           <div className="space-y-2">
-            <Label>Assignee (Optional)</Label>
+            <Label>{t("taskForm.assigneeLabel")}</Label>
             <Controller
               control={control}
               name="assignee_id"
               render={({ field }) => (
                 <Select onValueChange={field.onChange} value={field.value || ""}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select assignee">
+                    <SelectValue placeholder={t("taskForm.selectAssignee")}>
                       {field.value ? staffList?.find((s) => s.id === field.value)?.full_name : undefined}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Unassigned</SelectItem>
+                    <SelectItem value="">{t("tasks.unassigned")}</SelectItem>
                     {staffList?.map((staff) => (
                       <SelectItem key={staff.id} value={staff.id}>
                         {staff.full_name} {staff.email ? `(${staff.email})` : ""}
@@ -233,11 +229,17 @@ export function EditTaskDialog({
               variant="outline"
               onClick={() => onOpenChange(false)}
             >
-              Cancel
+              {t("action.cancel")}
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Changes
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {t("taskForm.submitSaving")}
+                </>
+              ) : (
+                t("action.save")
+              )}
             </Button>
           </div>
         </form>
