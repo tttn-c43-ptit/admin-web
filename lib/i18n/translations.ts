@@ -352,6 +352,7 @@ export const translations = {
     "taskForm.selectGarden": "Select a garden",
     "taskForm.typeLabel": "Task Type",
     "taskForm.selectType": "Select a task type",
+    "taskForm.startDateLabel": "Start Date",
     "taskForm.dueDateLabel": "Due Date",
     "taskForm.assigneeLabel": "Assignee (Optional)",
     "taskForm.selectAssignee": "Select staff member",
@@ -360,6 +361,13 @@ export const translations = {
     "taskForm.submitCreate": "Create Task",
     "taskForm.submitSave": "Save Task",
     "taskForm.submitSaving": "Saving...",
+    "taskForm.repeatPatternLabel": "Repeat Frequency",
+    "taskForm.selectRepeatPattern": "Select repeat frequency",
+    "taskForm.repeatNone": "Does not repeat (One-time)",
+    "taskForm.repeatDaily": "Daily",
+    "taskForm.repeatWeekly": "Weekly",
+    "taskForm.repeatMonthly": "Monthly",
+    "taskForm.repeatUntilLabel": "Repeat Until (Limit Date)",
 
     // Task Complete Dialog
     "taskComplete.title": "Complete Task",
@@ -973,6 +981,7 @@ export const translations = {
     "taskForm.selectGarden": "Chọn khu vườn",
     "taskForm.typeLabel": "Loại công việc",
     "taskForm.selectType": "Chọn loại công việc",
+    "taskForm.startDateLabel": "Thời gian bắt đầu",
     "taskForm.dueDateLabel": "Hạn hoàn thành",
     "taskForm.assigneeLabel": "Người thực hiện (Tùy chọn)",
     "taskForm.selectAssignee": "Chọn nhân viên phụ trách",
@@ -981,6 +990,13 @@ export const translations = {
     "taskForm.submitCreate": "Tạo công việc",
     "taskForm.submitSave": "Lưu thay đổi",
     "taskForm.submitSaving": "Đang lưu...",
+    "taskForm.repeatPatternLabel": "Tần suất lặp lại",
+    "taskForm.selectRepeatPattern": "Chọn tần suất lặp lại",
+    "taskForm.repeatNone": "Không lặp lại (Một lần)",
+    "taskForm.repeatDaily": "Hàng ngày",
+    "taskForm.repeatWeekly": "Hàng tuần",
+    "taskForm.repeatMonthly": "Hàng tháng",
+    "taskForm.repeatUntilLabel": "Lặp đến ngày (Hạn chót)",
 
     // Task Complete Dialog
     "taskComplete.title": "Báo cáo hoàn thành công việc",

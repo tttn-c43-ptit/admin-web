@@ -48,6 +48,15 @@ const ALLOWED_STATUS_TRANSITIONS: Record<string, string[]> = {
 };
 
 import { useTranslation } from "@/components/i18n-provider";
+import { TranslationKey } from "@/lib/i18n/translations";
+
+const statusKeyMap: Record<string, TranslationKey> = {
+  UNKNOWN: "status.unknown",
+  HEALTHY: "status.healthy",
+  WATCHING: "status.watching",
+  SICK: "status.sick",
+  DEAD: "status.dead",
+};
 
 interface UpdatePlantDialogProps {
   open: boolean;
@@ -168,7 +177,9 @@ export function UpdatePlantDialog({
                   <div className="space-y-1.5">
                     <Select value={field.value} onValueChange={field.onChange} disabled={isDeadTerminal}>
                       <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Chọn trạng thái" />
+                        <SelectValue placeholder={t("createPlant.selectStatus")}>
+                          {field.value ? t(statusKeyMap[field.value] || "status.unknown") : undefined}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="UNKNOWN" disabled={!allowed.includes("UNKNOWN")}>{t("status.unknown")}</SelectItem>

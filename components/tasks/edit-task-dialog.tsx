@@ -29,6 +29,23 @@ import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
 import { useTranslation } from "@/components/i18n-provider";
+import { TranslationKey } from "@/lib/i18n/translations";
+
+const typeKeyMap: Record<string, TranslationKey> = {
+  WATER: "taskType.WATER",
+  FERTILIZE: "taskType.FERTILIZE",
+  SPRAY: "taskType.SPRAY",
+  INSPECT: "taskType.INSPECT",
+  HARVEST: "taskType.HARVEST",
+  OTHER: "taskType.OTHER",
+};
+
+const statusKeyMap: Record<string, TranslationKey> = {
+  PENDING: "taskStatus.PENDING",
+  IN_PROGRESS: "taskStatus.IN_PROGRESS",
+  DONE: "taskStatus.DONE",
+  CANCELLED: "taskStatus.CANCELLED",
+};
 
 const taskSchema = z.object({
   type: z.enum(["WATER", "FERTILIZE", "SPRAY", "INSPECT", "HARVEST", "OTHER"]),
@@ -140,7 +157,9 @@ export function EditTaskDialog({
               render={({ field }) => (
                 <Select onValueChange={field.onChange} value={field.value}>
                   <SelectTrigger>
-                    <SelectValue placeholder={t("taskForm.selectType")} />
+                    <SelectValue placeholder={t("taskForm.selectType")}>
+                      {field.value ? t(typeKeyMap[field.value] || "taskType.OTHER") : undefined}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="WATER">{t("taskType.WATER")}</SelectItem>
@@ -164,7 +183,9 @@ export function EditTaskDialog({
               render={({ field }) => (
                 <Select onValueChange={field.onChange} value={field.value}>
                   <SelectTrigger>
-                    <SelectValue placeholder={t("plants.colStatus")} />
+                    <SelectValue placeholder={t("plants.colStatus")}>
+                      {field.value ? t(statusKeyMap[field.value] || "taskStatus.PENDING") : undefined}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="PENDING">{t("taskStatus.PENDING")}</SelectItem>

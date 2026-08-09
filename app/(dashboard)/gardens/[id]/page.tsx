@@ -13,7 +13,6 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ZonesPanel } from "./zones-panel";
 import { PlantsPanel } from "./plants-panel";
-import { SchedulesPanel } from "@/components/schedules/schedules-panel";
 import { useTranslation } from "@/components/i18n-provider";
 
 // Load GardenMap dynamically to avoid SSR issues with Leaflet
@@ -175,10 +174,9 @@ export default function GardenDetailPage() {
 
         <div className="lg:col-span-1">
           <Tabs defaultValue="plants" className="w-full">
-            <TabsList className="w-full grid grid-cols-3">
+            <TabsList className="w-full grid grid-cols-2">
               <TabsTrigger value="plants">Cây trồng ({plantsData?.items?.length || 0})</TabsTrigger>
               <TabsTrigger value="zones">{t("gardenDetail.tabZones")}</TabsTrigger>
-              <TabsTrigger value="schedules">{t("gardenDetail.tabSchedules")}</TabsTrigger>
             </TabsList>
             <TabsContent value="plants" className="mt-4">
               <PlantsPanel
@@ -196,9 +194,6 @@ export default function GardenDetailPage() {
                 activeZoneId={activeZoneId}
                 onSelectZone={(zoneId) => setActiveZoneId(zoneId)}
               />
-            </TabsContent>
-            <TabsContent value="schedules" className="mt-4">
-              <SchedulesPanel gardenId={id} />
             </TabsContent>
           </Tabs>
         </div>

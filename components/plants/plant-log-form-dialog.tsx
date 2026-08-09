@@ -27,6 +27,15 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { ImageUploader } from "@/components/ui/image-uploader";
 import { useTranslation } from "@/components/i18n-provider";
+import { TranslationKey } from "@/lib/i18n/translations";
+
+const statusKeyMap: Record<string, TranslationKey> = {
+  UNKNOWN: "status.unknown",
+  HEALTHY: "status.healthy",
+  WATCHING: "status.watching",
+  SICK: "status.sick",
+  DEAD: "status.dead",
+};
 
 const formSchema = z.object({
   status: z.enum(["UNKNOWN", "HEALTHY", "WATCHING", "SICK", "DEAD"] as const),
@@ -101,7 +110,9 @@ export function PlantLogFormDialog({
               render={({ field }) => (
                 <Select value={field.value} onValueChange={field.onChange}>
                   <SelectTrigger>
-                    <SelectValue placeholder={t("createPlant.selectStatus")} />
+                    <SelectValue placeholder={t("createPlant.selectStatus")}>
+                      {field.value ? t(statusKeyMap[field.value] || "status.unknown") : undefined}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="HEALTHY">{t("status.healthy")}</SelectItem>

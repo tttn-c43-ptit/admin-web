@@ -12,6 +12,7 @@ import { Plus, MoreHorizontal, Play, CheckCircle2, ChevronLeft, ChevronRight, Ed
 import { toast } from "sonner";
 import { useTranslation } from "@/components/i18n-provider";
 import { TranslationKey } from "@/lib/i18n/translations";
+import { getTaskRecurrence } from "@/lib/task-recurrence-store";
 import { EditTaskDialog } from "@/components/tasks/edit-task-dialog";
 import { TaskOut, PaginatedResponse, TaskStatus, User } from "@/types";
 import { useQuery } from "@tanstack/react-query";
@@ -156,7 +157,42 @@ export function TasksDataTable({ refreshTrigger = 0 }: TasksDataTableProps) {
       header: t("tasks.colDueDate"),
       cell: ({ row }) => {
         const date = row.getValue("due_date") as string;
-        return date ? format(new Date(date), "MMM d, yyyy HH:mm") : "-";
+        return date ? format(new Date(date), "dd/MM/yyyy HH:mm") : "-";
+      },
+    },
+    {
+      accessorKey: "repeat_pattern",
+      header: "Tần suất & Lên lịch",
+      cell: ({ row }) => {
+        const stored = getTaskRecurrence(row.original.id);
+        const pattern = row.original.repeat_pattern || stored?.repeat_pattern || "NONE";
+        const until = row.original.repeat_until || stored?.repeat_until;
+        const patternMap: Record<string, string> = {
+          NONE: "Một lần",
+          DAILY: "Hàng ngày",
+          WEEKLY: "Hàng tuần",
+          MONTHLY: "Hàng tháng",
+        };
+        const colorMap: Record<string, string> = {
+          NONE: "bg-slate-100 text-slate-600 border border-slate-200",
+          DAILY: "bg-blue-100 text-blue-700 border border-blue-200 font-semibold",
+          WEEKLY: "bg-emerald-100 text-emerald-700 border border-emerald-200 font-semibold",
+          MONTHLY: "bg-purple-100 text-purple-700 border border-purple-200 font-semibold",
+        };
+        const text = patternMap[pattern] || "Một lần";
+        const badgeColor = colorMap[pattern] || colorMap.NONE;
+        return (
+          <div className="text-xs space-y-0.5">
+            <span className={`inline-block px-2 py-0.5 rounded ${badgeColor}`}>
+              {text}
+            </span>
+            {pattern !== "NONE" && until && (
+              <div className="text-[11px] text-amber-700 font-mono">
+                Đến: {format(new Date(until), "dd/MM/yyyy")}
+              </div>
+            )}
+          </div>
+        );
       },
     },
     {

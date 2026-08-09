@@ -38,13 +38,35 @@ import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
 import { GardenDetail, PaginatedResponse, User } from "@/types";
 import { useTranslation } from "@/components/i18n-provider";
+import { TranslationKey } from "@/lib/i18n/translations";
+import { saveTaskRecurrence } from "@/lib/task-recurrence-store";
+
+const typeKeyMap: Record<string, TranslationKey> = {
+  WATER: "taskType.WATER",
+  FERTILIZE: "taskType.FERTILIZE",
+  SPRAY: "taskType.SPRAY",
+  INSPECT: "taskType.INSPECT",
+  HARVEST: "taskType.HARVEST",
+  OTHER: "taskType.OTHER",
+};
+
+const repeatKeyMap: Record<string, TranslationKey> = {
+  NONE: "taskForm.repeatNone",
+  DAILY: "taskForm.repeatDaily",
+  WEEKLY: "taskForm.repeatWeekly",
+  MONTHLY: "taskForm.repeatMonthly",
+};
 
 const taskSchema = z.object({
-  garden_id: z.string().uuid("Please select a garden"),
+  title: z.string().max(150).optional(),
+  garden_id: z.string().min(1, "Vui lòng chọn khu vườn"),
   type: z.enum(["WATER", "FERTILIZE", "SPRAY", "INSPECT", "HARVEST", "OTHER"]),
   description: z.string().max(5000).optional(),
+  start_date: z.string().optional(),
   due_date: z.string().optional(),
   assignee_id: z.string().optional(),
+  repeat_pattern: z.enum(["NONE", "DAILY", "WEEKLY", "MONTHLY"]),
+  repeat_until: z.string().optional(),
 });
 
 type TaskFormValues = z.infer<typeof taskSchema>;
@@ -95,26 +117,44 @@ export function TaskFormDialog({
   const form = useForm<TaskFormValues>({
     resolver: zodResolver(taskSchema),
     defaultValues: {
+      title: taskToEdit?.title || "",
       garden_id: taskToEdit?.garden_id || gardenId || "",
       type: taskToEdit?.type || "WATER",
       description: taskToEdit?.description || "",
+      start_date: taskToEdit?.start_date
+        ? new Date(taskToEdit.start_date).toISOString().slice(0, 16)
+        : "",
       due_date: taskToEdit?.due_date
         ? new Date(taskToEdit.due_date).toISOString().slice(0, 16)
         : "",
       assignee_id: taskToEdit?.assignee_id || "",
+      repeat_pattern: taskToEdit?.repeat_pattern || "NONE",
+      repeat_until: taskToEdit?.repeat_until
+        ? new Date(taskToEdit.repeat_until).toISOString().slice(0, 10)
+        : "",
     },
   });
+
+  const watchRepeatPattern = form.watch("repeat_pattern");
 
   useEffect(() => {
     if (open) {
       form.reset({
+        title: taskToEdit?.title || "",
         garden_id: taskToEdit?.garden_id || gardenId || "",
         type: taskToEdit?.type || "WATER",
         description: taskToEdit?.description || "",
+        start_date: taskToEdit?.start_date
+          ? new Date(taskToEdit.start_date).toISOString().slice(0, 16)
+          : "",
         due_date: taskToEdit?.due_date
           ? new Date(taskToEdit.due_date).toISOString().slice(0, 16)
           : "",
         assignee_id: taskToEdit?.assignee_id || "",
+        repeat_pattern: taskToEdit?.repeat_pattern || "NONE",
+        repeat_until: taskToEdit?.repeat_until
+          ? new Date(taskToEdit.repeat_until).toISOString().slice(0, 10)
+          : "",
       });
     }
   }, [open, taskToEdit, gardenId, form]);
@@ -124,14 +164,32 @@ export function TaskFormDialog({
     try {
       const payload: any = {
         ...data,
+        title: data.title || undefined,
+        start_date: data.start_date ? new Date(data.start_date).toISOString() : undefined,
         due_date: data.due_date ? new Date(data.due_date).toISOString() : undefined,
         assignee_id: data.assignee_id || undefined,
+        repeat_pattern: data.repeat_pattern,
+        repeat_until: data.repeat_pattern !== "NONE" && data.repeat_until ? new Date(data.repeat_until).toISOString() : undefined,
       };
 
+      let resTask: TaskOut | null = null;
       if (taskToEdit) {
-        await api.put(`api/tasks/${taskToEdit.id}`, { json: payload });
+        resTask = await api.put(`api/tasks/${taskToEdit.id}`, { json: payload }).json();
+        const tId = resTask?.id || taskToEdit.id;
+        if (tId) {
+          saveTaskRecurrence(tId, {
+            repeat_pattern: data.repeat_pattern,
+            repeat_until: payload.repeat_until,
+          });
+        }
       } else {
-        await api.post("api/tasks", { json: payload });
+        resTask = await api.post("api/tasks", { json: payload }).json();
+        if (resTask?.id) {
+          saveTaskRecurrence(resTask.id, {
+            repeat_pattern: data.repeat_pattern,
+            repeat_until: payload.repeat_until,
+          });
+        }
       }
       form.reset();
       setOpen(false);
@@ -213,7 +271,9 @@ export function TaskFormDialog({
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder={t("taskForm.selectType")} />
+                        <SelectValue placeholder={t("taskForm.selectType")}>
+                          {field.value ? t(typeKeyMap[field.value] || "taskType.OTHER") : undefined}
+                        </SelectValue>
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -230,19 +290,79 @@ export function TaskFormDialog({
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="due_date"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("taskForm.dueDateLabel")}</FormLabel>
-                  <FormControl>
-                    <Input type="datetime-local" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+            <div className="grid grid-cols-2 gap-3">
+              <FormField
+                control={form.control}
+                name="start_date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("taskForm.startDateLabel")}</FormLabel>
+                    <FormControl>
+                      <Input type="datetime-local" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="due_date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("taskForm.dueDateLabel")}</FormLabel>
+                    <FormControl>
+                      <Input type="datetime-local" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <FormField
+                control={form.control}
+                name="repeat_pattern"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("taskForm.repeatPatternLabel")}</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder={t("taskForm.selectRepeatPattern")}>
+                            {field.value ? t(repeatKeyMap[field.value] || "taskForm.repeatNone") : undefined}
+                          </SelectValue>
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="NONE">{t("taskForm.repeatNone")}</SelectItem>
+                        <SelectItem value="DAILY">{t("taskForm.repeatDaily")}</SelectItem>
+                        <SelectItem value="WEEKLY">{t("taskForm.repeatWeekly")}</SelectItem>
+                        <SelectItem value="MONTHLY">{t("taskForm.repeatMonthly")}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {watchRepeatPattern !== "NONE" && (
+                <FormField
+                  control={form.control}
+                  name="repeat_until"
+                  render={({ field }) => (
+                    <FormItem className="animate-in fade-in-0">
+                      <FormLabel className="text-amber-700 font-medium">{t("taskForm.repeatUntilLabel")}</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               )}
-            />
+            </div>
 
             <FormField
               control={form.control}

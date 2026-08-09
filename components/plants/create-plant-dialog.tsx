@@ -27,6 +27,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useTranslation } from "@/components/i18n-provider";
+import { TranslationKey } from "@/lib/i18n/translations";
+
+const statusKeyMap: Record<string, TranslationKey> = {
+  UNKNOWN: "status.unknown",
+  HEALTHY: "status.healthy",
+  WATCHING: "status.watching",
+  SICK: "status.sick",
+  DEAD: "status.dead",
+};
 
 const formSchema = z.object({
   code: z.string().min(1, "Code is required").max(16, "Max 16 chars"),
@@ -188,7 +197,9 @@ export function CreatePlantDialog({
               render={({ field }) => (
                 <Select value={field.value} onValueChange={field.onChange}>
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder={t("createPlant.selectStatus")} />
+                    <SelectValue placeholder={t("createPlant.selectStatus")}>
+                      {field.value ? t(statusKeyMap[field.value] || "status.unknown") : undefined}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="UNKNOWN">{t("status.unknown")}</SelectItem>

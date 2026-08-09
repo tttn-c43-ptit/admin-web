@@ -33,6 +33,14 @@ import {
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { useTranslation } from "@/components/i18n-provider";
+import { TranslationKey } from "@/lib/i18n/translations";
+
+const invTypeKeyMap: Record<string, TranslationKey> = {
+  FERTILIZER: "invType.FERTILIZE",
+  PESTICIDE: "invType.PESTICIDE",
+  TOOL: "invType.TOOL",
+  OTHER: "invType.OTHER",
+};
 
 const formSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
@@ -151,7 +159,9 @@ export function InventoryFormDialog({
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder={t("inventory.filterTypeLabel")} />
+                        <SelectValue placeholder={t("inventory.filterTypeLabel")}>
+                          {field.value ? t(invTypeKeyMap[field.value] || "invType.OTHER") : undefined}
+                        </SelectValue>
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>

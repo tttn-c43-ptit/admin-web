@@ -131,17 +131,23 @@ export interface PlantLogCreate {
 
 export type TaskType = 'WATER' | 'FERTILIZE' | 'SPRAY' | 'INSPECT' | 'HARVEST' | 'OTHER';
 export type TaskStatus = 'PENDING' | 'IN_PROGRESS' | 'DONE' | 'CANCELLED';
+export type RepeatPattern = 'NONE' | 'DAILY' | 'WEEKLY' | 'MONTHLY';
 
 export interface TaskOut {
   id: string;
   garden_id: string;
   plant_id: string | null;
+  zone_id?: string | null;
   assignee_id: string | null;
   created_by: string;
   type: TaskType;
+  title?: string | null;
   description: string | null;
   status: TaskStatus;
+  start_date?: string | null;
   due_date: string | null;
+  repeat_pattern?: RepeatPattern;
+  repeat_until?: string | null;
   completed_at: string | null;
   proof_images: string[];
   created_at: string;
@@ -151,17 +157,24 @@ export interface TaskCreate {
   garden_id: string;
   type: TaskType;
   plant_id?: string | null;
+  zone_id?: string | null;
   assignee_id?: string | null;
+  title?: string | null;
   description?: string | null;
+  start_date?: string | null;
   due_date?: string | null;
+  repeat_pattern?: RepeatPattern;
+  repeat_until?: string | null;
 }
 
 export interface TaskUpdate {
   type?: TaskType;
-  plant_id?: string | null;
   assignee_id?: string | null;
+  title?: string | null;
   description?: string | null;
+  start_date?: string | null;
   due_date?: string | null;
+  repeat_until?: string | null;
   status?: TaskStatus;
 }
 
