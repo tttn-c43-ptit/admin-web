@@ -777,7 +777,7 @@ export const translations = {
     "gardenDetail.tabSchedules": "Lịch làm việc",
 
     // Zones Panel
-    "zones.panelTitle": "Danh sách phân khu",
+    "zones.panelTitle": "Phân khu",
     "zones.panelDesc": "Quản lý các phân khu trồng và phân công nhân viên",
     "zones.addZone": "Thêm phân khu",
     "zones.createNew": "Tạo phân khu mới",

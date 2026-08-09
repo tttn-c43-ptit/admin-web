@@ -50,7 +50,22 @@ interface GardenMapProps {
   activePlantId?: string | null;
   readOnly?: boolean;
   onDeleteZone?: (zoneId: string) => void;
-  onUpdatePlantPosition?: (plantId: string, lat: number, lng: number) => void;
+  onUpdatePlantPosition?: (plantId: string, lat: number, lng: number, zoneId?: string | null) => void;
+}
+
+// Ray-casting point in polygon algorithm for GIS bounds validation
+function isPointInPolygonLatLng(lat: number, lng: number, points: L.LatLng[]): boolean {
+  if (!points || points.length < 3) return false;
+  let inside = false;
+  for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+    const xi = points[i].lat, yi = points[i].lng;
+    const xj = points[j].lat, yj = points[j].lng;
+    
+    const intersect = ((yi > lng) !== (yj > lng))
+        && (lat < (xj - xi) * (lng - yi) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
 }
 
 // Generate default initial zone polygon points if user hasn't saved custom boundary yet
@@ -539,9 +554,64 @@ export default function GardenMap({
 
         if (!readOnly && onUpdatePlantPosition) {
           marker.on("dragend", (e) => {
-            const newPos = e.target.getLatLng();
-            onUpdatePlantPosition(plant.id, newPos.lat, newPos.lng);
-            toast.success(`Đã cập nhật vị trí cây ${plant.code}`);
+            const markerObj = e.target;
+            const newPos = markerObj.getLatLng();
+            const newLat = newPos.lat;
+            const newLng = newPos.lng;
+
+            // 1. Check if new position is inside outer Garden Boundary
+            let isInsideGarden = true;
+            const gardenPolyLayers: L.Polygon[] = [];
+            if (drawnItems.current) {
+              drawnItems.current.eachLayer((layer) => {
+                if (layer instanceof L.Polygon) {
+                  gardenPolyLayers.push(layer);
+                }
+              });
+            }
+
+            if (gardenPolyLayers.length > 0) {
+              isInsideGarden = gardenPolyLayers.some((poly) => {
+                const raw = poly.getLatLngs();
+                const pts = Array.isArray(raw[0]) ? (raw[0] as L.LatLng[]) : (raw as L.LatLng[]);
+                return isPointInPolygonLatLng(newLat, newLng, pts);
+              });
+            }
+
+            // If outside garden boundary -> Reject drag & Revert position
+            if (!isInsideGarden) {
+              toast.error(`Vị trí không hợp lệ! Cây ${plant.code} phải nằm trong ranh giới khu vườn.`, { duration: 5000 });
+              markerObj.setLatLng([pLat, pLng]);
+              return;
+            }
+
+            // 2. Check which Zone polygon contains the new location
+            let matchedZoneId: string | null = null;
+            let matchedZoneName: string | null = null;
+
+            zonePolyMapRef.current.forEach((poly, zId) => {
+              const raw = poly.getLatLngs();
+              const pts = Array.isArray(raw[0]) ? (raw[0] as L.LatLng[]) : (raw as L.LatLng[]);
+              if (isPointInPolygonLatLng(newLat, newLng, pts)) {
+                matchedZoneId = zId;
+                const zoneObj = zones?.find((z) => z.id === zId);
+                matchedZoneName = zoneObj?.name || "Phân khu";
+              }
+            });
+
+            // 3. Perform position & zone update
+            const oldZoneId = plant.zone_id;
+            onUpdatePlantPosition(plant.id, newLat, newLng, matchedZoneId);
+
+            if (matchedZoneId !== oldZoneId) {
+              if (matchedZoneId) {
+                toast.success(`Đã chuyển cây ${plant.code} sang ${matchedZoneName}!`, { duration: 4000 });
+              } else {
+                toast.info(`Đã cập nhật vị trí cây ${plant.code} (Không thuộc phân khu nào).`, { duration: 4000 });
+              }
+            } else {
+              toast.success(`Đã cập nhật vị trí cây ${plant.code}`);
+            }
           });
         }
 

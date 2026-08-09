@@ -90,14 +90,15 @@ export default function GardenDetailPage() {
   });
 
   const updatePlantPositionMutation = useMutation({
-    mutationFn: async ({ plantId, grid_x, grid_y }: { plantId: string; grid_x: number; grid_y: number }) => {
+    mutationFn: async ({ plantId, grid_x, grid_y, zone_id }: { plantId: string; grid_x: number; grid_y: number; zone_id?: string | null }) => {
       const targetPlant = plantsData?.items.find((p) => p.id === plantId);
       if (!targetPlant) throw new Error("Plant not found");
+      const finalZoneId = zone_id !== undefined ? zone_id : targetPlant.zone_id;
       return api.put(`api/plants/${plantId}`, {
         json: {
           code: targetPlant.code,
           status: targetPlant.status,
-          zone_id: targetPlant.zone_id,
+          zone_id: finalZoneId,
           grid_x: grid_x,
           grid_y: grid_y,
         },
@@ -106,6 +107,7 @@ export default function GardenDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["plants_grid", id] });
       queryClient.invalidateQueries({ queryKey: queryKeys.plants(id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.zones(id) });
     },
   });
 
@@ -165,8 +167,8 @@ export default function GardenDetailPage() {
             activeZoneId={activeZoneId}
             activePlantId={activePlantId}
             onDeleteZone={(zId) => deleteZoneMutation.mutate(zId)}
-            onUpdatePlantPosition={(plantId, lat, lng) => 
-              updatePlantPositionMutation.mutate({ plantId, grid_x: lng, grid_y: lat })
+            onUpdatePlantPosition={(plantId, lat, lng, zoneId) => 
+              updatePlantPositionMutation.mutate({ plantId, grid_x: lng, grid_y: lat, zone_id: zoneId })
             }
           />
         </div>

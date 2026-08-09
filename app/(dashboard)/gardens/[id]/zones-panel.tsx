@@ -26,7 +26,7 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { Plus, Trash2, UserPlus, X, Edit2, MapPin } from "lucide-react";
+import { Plus, Trash2, UserPlus, X, Edit2, MapPin, Layers } from "lucide-react";
 import { useTranslation } from "@/components/i18n-provider";
 
 const createZoneSchema = z.object({
@@ -111,19 +111,21 @@ export function ZonesPanel({ gardenId, activeZoneId, onSelectZone }: ZonesPanelP
   };
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between pb-4">
-        <div>
-          <CardTitle>{t("zones.panelTitle")}</CardTitle>
-          <CardDescription>{t("zones.panelDesc")}</CardDescription>
-        </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger render={
-            <Button size="sm" onClick={() => setValue("grid_position", ((zones?.length || 0) + 1).toString())}>
-              <Plus className="h-4 w-4 mr-2" />
-              {t("zones.addZone")}
-            </Button>
-          } />
+    <Card className="border shadow-xs">
+      <CardHeader className="pb-3 border-b space-y-1.5">
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle className="text-base font-semibold flex items-center gap-2 whitespace-nowrap">
+            <Layers className="h-4 w-4 text-emerald-600 shrink-0" />
+            <span>{t("zones.panelTitle")}</span>
+            <span className="text-xs text-slate-500 font-normal">({zones?.length || 0})</span>
+          </CardTitle>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger render={
+              <Button size="sm" onClick={() => setValue("grid_position", ((zones?.length || 0) + 1).toString())} className="bg-emerald-600 hover:bg-emerald-700 shrink-0">
+                <Plus className="h-4 w-4 mr-1" />
+                {t("zones.addZone")}
+              </Button>
+            } />
           <DialogContent>
             <DialogHeader>
               <DialogTitle>{t("zones.createNew")}</DialogTitle>
@@ -170,6 +172,10 @@ export function ZonesPanel({ gardenId, activeZoneId, onSelectZone }: ZonesPanelP
             </form>
           </DialogContent>
         </Dialog>
+        </div>
+        <CardDescription className="text-xs text-slate-500 leading-normal mt-1">
+          {t("zones.panelDesc")}
+        </CardDescription>
       </CardHeader>
 
       <CardContent>
