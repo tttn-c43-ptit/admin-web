@@ -28,6 +28,7 @@ import { QrCode } from "lucide-react";
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { useQueryClient } from "@tanstack/react-query";
 import { LanguageToggle } from "@/components/layout/language-toggle";
+import { Logo } from "@/components/layout/logo";
 import { useTranslation } from "@/components/i18n-provider";
 import type { TranslationKey } from "@/lib/i18n/translations";
 
@@ -125,12 +126,9 @@ export default function DashboardLayout({
         <div className="flex h-16 items-center border-b border-border px-6">
           <Link
             href={role === "STAFF" ? "/tasks" : "/dashboard"}
-            className="flex items-center gap-3 text-primary font-bold text-xl tracking-tight"
+            className="hover:opacity-90 transition-opacity"
           >
-            <div className="bg-white overflow-hidden rounded-lg h-8 w-8 flex items-center justify-center shadow-sm border">
-              <img src="/images/logo.png" alt="Logo" className="h-full w-full object-cover" />
-            </div>
-            <span>{t("app.title")}</span>
+            <Logo size="md" />
           </Link>
         </div>
         <nav className="flex flex-col gap-1 p-4">

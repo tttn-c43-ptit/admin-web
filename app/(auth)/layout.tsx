@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { LanguageToggle } from "@/components/layout/language-toggle";
+import { Logo } from "@/components/layout/logo";
 
 export default function AuthLayout({
   children,
@@ -10,11 +11,8 @@ export default function AuthLayout({
     <div className="flex min-h-screen flex-col bg-surface">
       {/* Auth Page Header Bar */}
       <header className="flex h-16 w-full items-center justify-between border-b border-border bg-card px-6 shadow-xs">
-        <Link href="/" className="flex items-center gap-3 text-primary font-bold text-xl tracking-tight">
-          <div className="bg-white overflow-hidden rounded-lg h-8 w-8 flex items-center justify-center shadow-sm border border-border">
-            <img src="/images/logo.png" alt="Logo" className="h-full w-full object-cover" />
-          </div>
-          <span>PlantCare</span>
+        <Link href="/" className="hover:opacity-90 transition-opacity">
+          <Logo size="md" />
         </Link>
 
         <div className="flex items-center gap-2">
