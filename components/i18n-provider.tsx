@@ -14,7 +14,7 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 const LANGUAGE_STORAGE_KEY = "plantcare_language";
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguageState] = useState<Language>("en");
+  const [language, setLanguageState] = useState<Language>("vi");
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
@@ -22,6 +22,8 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       const savedLang = localStorage.getItem(LANGUAGE_STORAGE_KEY) as Language;
       if (savedLang && (savedLang === "en" || savedLang === "vi")) {
         setLanguageState(savedLang);
+      } else {
+        setLanguageState("vi");
       }
     } catch {
       // Ignore localStorage errors

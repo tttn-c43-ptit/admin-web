@@ -1,5 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/components/i18n-provider";
+import { TranslationKey } from "@/lib/i18n/translations";
 
 // Make sure to define PlantStatus if it's not in types, but according to docs it's UNKNOWN, HEALTHY, WATCHING, SICK, DEAD
 export const PLANT_STATUS_COLORS: Record<string, { bg: string; text: string; hex: string }> = {
@@ -16,14 +18,18 @@ interface PlantStatusBadgeProps {
 }
 
 export function PlantStatusBadge({ status, className }: PlantStatusBadgeProps) {
+  const { t } = useTranslation();
   const colors = PLANT_STATUS_COLORS[status] || PLANT_STATUS_COLORS.UNKNOWN;
   
+  const statusKey = `status.${status.toLowerCase()}` as TranslationKey;
+  const label = t(statusKey, status);
+
   return (
     <Badge
       variant="outline"
       className={cn("font-medium border-transparent", colors.bg, colors.text, className)}
     >
-      {status}
+      {label}
     </Badge>
   );
 }

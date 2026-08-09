@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -17,8 +17,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
-import { Zone } from "@/types";
+import { Loader2, AlertTriangle, Sparkles } from "lucide-react";
+import { Plant, Zone } from "@/types";
 import {
   Select,
   SelectContent,
@@ -45,6 +45,7 @@ interface CreatePlantDialogProps {
   gardenId: string;
   onSuccess: () => void;
   zonesData?: Zone[];
+  existingPlants?: Plant[];
 }
 
 export function CreatePlantDialog({
@@ -53,6 +54,7 @@ export function CreatePlantDialog({
   gardenId,
   onSuccess,
   zonesData,
+  existingPlants = [],
 }: CreatePlantDialogProps) {
   const { t } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -62,13 +64,40 @@ export function CreatePlantDialog({
     handleSubmit,
     reset,
     control,
+    setValue,
     formState: { errors },
+    watch,
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       status: "UNKNOWN",
     },
   });
+
+  const watchCode = watch("code") || "";
+  const trimmedCode = watchCode.trim();
+
+  // Check if plant code already exists in garden
+  const isCollision = useMemo(() => {
+    if (!trimmedCode || !existingPlants.length) return false;
+    return existingPlants.some((p) => p.code.toLowerCase() === trimmedCode.toLowerCase());
+  }, [trimmedCode, existingPlants]);
+
+  // Compute a smart suggested non-colliding code
+  const suggestedCode = useMemo(() => {
+    if (!trimmedCode) return "";
+    const parts = trimmedCode.split("-");
+    const prefix = parts.length > 1 ? parts.slice(0, -1).join("-") : trimmedCode;
+    let idx = 1;
+    while (idx < 9999) {
+      const candidate = `${prefix}-${String(idx).padStart(3, "0")}`;
+      if (!existingPlants.some((p) => p.code.toLowerCase() === candidate.toLowerCase())) {
+        return candidate;
+      }
+      idx++;
+    }
+    return `${trimmedCode}-NEW`;
+  }, [trimmedCode, existingPlants]);
 
   async function onSubmit(values: FormValues) {
     setIsSubmitting(true);
@@ -84,13 +113,28 @@ export function CreatePlantDialog({
         },
       }).json();
       
-      toast.success(`Successfully created plant ${values.code}`);
+      toast.success(`Đã tạo thành công cây trồng ${values.code}!`);
       reset();
       onOpenChange(false);
       onSuccess();
     } catch (error: unknown) {
-      const err = error as { message?: string };
-      toast.error(err.message || "Failed to create plant");
+      let errorMessage = "Không thể tạo cây trồng mới";
+
+      if (error && typeof error === "object" && "response" in error) {
+        try {
+          const res = (error as { response: Response }).response;
+          const body = await res.json();
+          if (res.status === 409 || (body && body.detail && body.detail.includes("already exist"))) {
+            errorMessage = `Cảnh báo trùng mã cây! Mã cây '${values.code}' đã tồn tại trong vườn. Vui lòng đổi mã cây khác.`;
+          } else if (body && body.detail) {
+            errorMessage = body.detail;
+          }
+        } catch {
+          // fallback
+        }
+      }
+
+      toast.error(errorMessage, { duration: 6000 });
     } finally {
       setIsSubmitting(false);
     }
@@ -113,6 +157,27 @@ export function CreatePlantDialog({
             {errors.code && (
               <p className="text-sm text-destructive">{errors.code.message}</p>
             )}
+            {isCollision && (
+              <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs flex flex-col gap-2 font-medium animate-in fade-in-0">
+                <div className="flex items-center gap-1.5">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                  <span>Mã cây <strong>'{trimmedCode}'</strong> đã tồn tại trong vườn!</span>
+                </div>
+                {suggestedCode && (
+                  <div className="flex items-center justify-between gap-2 pt-1 border-t border-amber-200/60">
+                    <span className="text-[11px] text-amber-700">Mã tự do gợi ý: <strong>{suggestedCode}</strong></span>
+                    <button
+                      type="button"
+                      onClick={() => setValue("code", suggestedCode, { shouldValidate: true })}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-600 text-white text-[11px] font-bold hover:bg-amber-700 transition-colors shadow-xs cursor-pointer"
+                    >
+                      <Sparkles className="h-3 w-3" />
+                      Dùng mã này
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -122,7 +187,7 @@ export function CreatePlantDialog({
               name="status"
               render={({ field }) => (
                 <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder={t("createPlant.selectStatus")} />
                   </SelectTrigger>
                   <SelectContent>
@@ -143,14 +208,14 @@ export function CreatePlantDialog({
               control={control}
               name="zone_id"
               render={({ field }) => (
-                <Select value={field.value || ""} onValueChange={field.onChange}>
-                  <SelectTrigger>
+                <Select value={field.value || "none"} onValueChange={(val) => field.onChange(val === "none" ? "" : val)}>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder={t("createPlant.selectZone")}>
-                      {field.value ? zonesData?.find(z => z.id === field.value)?.name : t("createPlant.selectZone")}
+                      {field.value ? zonesData?.find(z => z.id === field.value)?.name : t("createPlant.noneZone")}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">{t("createPlant.noneZone")}</SelectItem>
+                    <SelectItem value="none">{t("createPlant.noneZone")}</SelectItem>
                     {zonesData?.map((zone) => (
                       <SelectItem key={zone.id} value={zone.id}>
                         {zone.name}
@@ -164,12 +229,12 @@ export function CreatePlantDialog({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="grid_x">{t("createPlant.gridXLabel")}</Label>
-              <Input id="grid_x" type="number" step="any" placeholder={t("createPlant.gridXPlaceholder")} {...register("grid_x")} />
+              <Label htmlFor="grid_x">Kinh độ (Longitude)</Label>
+              <Input id="grid_x" type="number" step="any" placeholder="Kinh độ (X)" {...register("grid_x")} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="grid_y">{t("createPlant.gridYLabel")}</Label>
-              <Input id="grid_y" type="number" step="any" placeholder={t("createPlant.gridYPlaceholder")} {...register("grid_y")} />
+              <Label htmlFor="grid_y">Vĩ độ (Latitude)</Label>
+              <Input id="grid_y" type="number" step="any" placeholder="Vĩ độ (Y)" {...register("grid_y")} />
             </div>
           </div>
 

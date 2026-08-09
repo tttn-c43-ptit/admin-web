@@ -398,6 +398,7 @@ export function PlantsDataTable({ gardenId }: PlantsDataTableProps) {
         gardenId={gardenId}
         onSuccess={refetch}
         zonesData={zonesData}
+        existingPlants={data?.items}
       />
       
       <PrintTagsDialog
@@ -419,6 +420,7 @@ export function PlantsDataTable({ gardenId }: PlantsDataTableProps) {
         onOpenChange={setIsCreatePlantOpen}
         gardenId={gardenId}
         zonesData={zonesData}
+        existingPlants={data?.items}
         onSuccess={() => refetch()}
       />
 

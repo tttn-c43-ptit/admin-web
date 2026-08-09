@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle, Lock } from "lucide-react";
 import { Plant, Zone } from "@/types";
 import {
   Select,
@@ -39,6 +39,16 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
+const ALLOWED_STATUS_TRANSITIONS: Record<string, string[]> = {
+  UNKNOWN: ["UNKNOWN", "HEALTHY", "WATCHING", "SICK"],
+  HEALTHY: ["HEALTHY", "WATCHING", "SICK"],
+  WATCHING: ["WATCHING", "HEALTHY", "SICK"],
+  SICK: ["SICK", "WATCHING", "HEALTHY", "DEAD"],
+  DEAD: ["DEAD"],
+};
+
+import { useTranslation } from "@/components/i18n-provider";
+
 interface UpdatePlantDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -54,6 +64,7 @@ export function UpdatePlantDialog({
   onSuccess,
   zonesData,
 }: UpdatePlantDialogProps) {
+  const { t } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
@@ -101,12 +112,25 @@ export function UpdatePlantDialog({
         },
       }).json();
       
-      toast.success(`Successfully updated plant ${values.code}`);
+      toast.success(`Đã cập nhật thông tin cây ${values.code}!`);
       onOpenChange(false);
       onSuccess();
     } catch (error: unknown) {
-      const err = error as { message?: string };
-      toast.error(err.message || "Failed to update plant");
+      let errorMessage = "Không thể cập nhật thông tin cây trồng";
+      if (error && typeof error === "object" && "response" in error) {
+        try {
+          const res = (error as { response: Response }).response;
+          const body = await res.json();
+          if (res.status === 409 || (body && body.detail && body.detail.includes("status transition"))) {
+            errorMessage = `Chuyển đổi trạng thái không hợp lệ! Theo quy trình nghiệp vụ: Cây phải ở trạng thái BỊ BỆNH (SICK) mới có thể chuyển sang ĐÃ CHẾT (DEAD), và cây ĐÃ CHẾT không thể chuyển về trạng thái khác.`;
+          } else if (body && body.detail) {
+            errorMessage = body.detail;
+          }
+        } catch {
+          // fallback
+        }
+      }
+      toast.error(errorMessage, { duration: 6000 });
     } finally {
       setIsSubmitting(false);
     }
@@ -116,40 +140,59 @@ export function UpdatePlantDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Edit Plant</DialogTitle>
+          <DialogTitle>Chỉnh sửa cây trồng</DialogTitle>
           <DialogDescription>
-            Update details for plant {plant.code}.
+            Cập nhật thông tin chi tiết cho mã cây {plant.code}.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="code">Plant Code</Label>
-            <Input id="code" placeholder="e.g. SR-001" {...register("code")} />
+            <Label htmlFor="code">Mã cây trồng</Label>
+            <Input id="code" placeholder="Ví dụ: SR-001" {...register("code")} />
             {errors.code && (
               <p className="text-sm text-destructive">{errors.code.message as string}</p>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="status">Status</Label>
+            <Label htmlFor="status">Trạng thái sức khỏe</Label>
             <Controller
               control={control}
               name="status"
-              render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="UNKNOWN">Unknown</SelectItem>
-                    <SelectItem value="HEALTHY">Healthy</SelectItem>
-                    <SelectItem value="WATCHING">Watching</SelectItem>
-                    <SelectItem value="SICK">Sick</SelectItem>
-                    <SelectItem value="DEAD">Dead</SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
+              render={({ field }) => {
+                const allowed = ALLOWED_STATUS_TRANSITIONS[plant.status] || [plant.status];
+                const isDeadTerminal = plant.status === "DEAD";
+
+                return (
+                  <div className="space-y-1.5">
+                    <Select value={field.value} onValueChange={field.onChange} disabled={isDeadTerminal}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Chọn trạng thái" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="UNKNOWN" disabled={!allowed.includes("UNKNOWN")}>{t("status.unknown")}</SelectItem>
+                        <SelectItem value="HEALTHY" disabled={!allowed.includes("HEALTHY")}>{t("status.healthy")}</SelectItem>
+                        <SelectItem value="WATCHING" disabled={!allowed.includes("WATCHING")}>{t("status.watching")}</SelectItem>
+                        <SelectItem value="SICK" disabled={!allowed.includes("SICK")}>{t("status.sick")}</SelectItem>
+                        <SelectItem value="DEAD" disabled={!allowed.includes("DEAD")}>{t("status.dead")}</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    {isDeadTerminal ? (
+                      <div className="p-2 rounded bg-slate-100 border border-slate-200 text-slate-600 text-xs flex items-center gap-1.5 font-medium">
+                        <Lock className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+                        <span>Cây đang ở trạng thái <strong>{t("status.dead")}</strong>. Đây là trạng thái cuối cùng, không thể đổi về trạng thái khác.</span>
+                      </div>
+                    ) : plant.status !== "SICK" && (
+                      <div className="text-[11px] text-slate-500 flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3 text-amber-500 shrink-0" />
+                        <span>Lưu ý: Cây phải ở trạng thái <strong>{t("status.sick")}</strong> trước khi có thể đổi sang <strong>{t("status.dead")}</strong>.</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              }}
             />
           </div>
 
@@ -180,12 +223,12 @@ export function UpdatePlantDialog({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="grid_x">Grid X (Optional)</Label>
-              <Input id="grid_x" type="number" step="any" placeholder="X coordinate" {...register("grid_x")} />
+              <Label htmlFor="grid_x">Kinh độ (Longitude)</Label>
+              <Input id="grid_x" type="number" step="any" placeholder="Kinh độ" {...register("grid_x")} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="grid_y">Grid Y (Optional)</Label>
-              <Input id="grid_y" type="number" step="any" placeholder="Y coordinate" {...register("grid_y")} />
+              <Label htmlFor="grid_y">Vĩ độ (Latitude)</Label>
+              <Input id="grid_y" type="number" step="any" placeholder="Vĩ độ" {...register("grid_y")} />
             </div>
           </div>
 
@@ -199,11 +242,11 @@ export function UpdatePlantDialog({
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              Hủy bỏ
             </Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Changes
+              Lưu thay đổi
             </Button>
           </DialogFooter>
         </form>

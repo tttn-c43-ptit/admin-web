@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -17,8 +17,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
-import { Zone } from "@/types";
+import { Loader2, AlertTriangle, Sparkles } from "lucide-react";
+import { Zone, Plant } from "@/types";
 import {
   Select,
   SelectContent,
@@ -45,6 +45,7 @@ interface BulkGenerateDialogProps {
   gardenId: string;
   onSuccess: () => void;
   zonesData?: Zone[];
+  existingPlants?: Plant[];
 }
 
 export function BulkGenerateDialog({
@@ -53,6 +54,7 @@ export function BulkGenerateDialog({
   gardenId,
   onSuccess,
   zonesData,
+  existingPlants = [],
 }: BulkGenerateDialogProps) {
   const { t } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -62,7 +64,9 @@ export function BulkGenerateDialog({
     handleSubmit,
     reset,
     control,
+    setValue,
     formState: { errors },
+    watch,
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -71,6 +75,48 @@ export function BulkGenerateDialog({
       start_index: 1,
     },
   });
+
+  const watchPrefix = watch("code_prefix") || "SR";
+  const watchCount = Number(watch("count")) || 10;
+  const rawStartIndex = watch("start_index");
+
+  // Calculate next available non-colliding index for this prefix
+  const nextAvailableIndex = useMemo(() => {
+    if (!existingPlants.length) return 1;
+    let idx = 1;
+    while (idx < 9999) {
+      const sampleCode = `${watchPrefix}-${String(idx).padStart(3, '0')}`;
+      if (!existingPlants.some(p => p.code.toLowerCase() === sampleCode.toLowerCase())) {
+        return idx;
+      }
+      idx++;
+    }
+    return 1;
+  }, [watchPrefix, existingPlants]);
+
+  // Set default start_index to nextAvailableIndex when dialog opens
+  useEffect(() => {
+    if (open) {
+      setValue("start_index", nextAvailableIndex);
+    }
+  }, [open, nextAvailableIndex, setValue]);
+
+  // Check collision ONLY if user entered a valid non-empty start_index
+  const rawStr = String(rawStartIndex ?? "").trim();
+  const hasValidStartIndex = rawStr !== "" && !isNaN(Number(rawStr));
+  const watchStartIndex = hasValidStartIndex ? Number(rawStartIndex) : null;
+
+  const sampleStartCode = useMemo(() => {
+    if (watchStartIndex === null) return "";
+    const lastIndex = watchStartIndex + Math.max(1, watchCount) - 1;
+    const width = Math.max(3, String(lastIndex).length);
+    return `${watchPrefix}-${String(watchStartIndex).padStart(width, '0')}`;
+  }, [watchPrefix, watchStartIndex, watchCount]);
+
+  const isCollision = useMemo(() => {
+    if (!hasValidStartIndex || watchStartIndex === null || !sampleStartCode) return false;
+    return existingPlants.some(p => p.code.toLowerCase() === sampleStartCode.toLowerCase());
+  }, [hasValidStartIndex, watchStartIndex, sampleStartCode, existingPlants]);
 
   async function onSubmit(values: FormValues) {
     setIsSubmitting(true);
@@ -85,13 +131,28 @@ export function BulkGenerateDialog({
         },
       }).json();
       
-      toast.success(`Successfully generated ${values.count} plants`);
+      toast.success(`Đã khởi tạo thành công ${values.count} cây trồng!`);
       reset();
       onOpenChange(false);
       onSuccess();
     } catch (error: unknown) {
-      const err = error as { message?: string };
-      toast.error(err.message || "Failed to generate plants");
+      let errorMessage = "Không thể khởi tạo cây trồng hàng loạt";
+      
+      if (error && typeof error === "object" && "response" in error) {
+        try {
+          const res = (error as { response: Response }).response;
+          const body = await res.json();
+          if (res.status === 409 || (body && body.detail && body.detail.includes("already exist"))) {
+            errorMessage = `Cảnh báo trùng mã cây! Chuỗi mã bắt đầu '${sampleStartCode}' đã tồn tại trong vườn. Vui lòng thay đổi Chỉ số bắt đầu hoặc Tiền tố mã.`;
+          } else if (body && body.detail) {
+            errorMessage = body.detail;
+          }
+        } catch {
+          // fallback to default
+        }
+      }
+
+      toast.error(errorMessage, { duration: 6000 });
     } finally {
       setIsSubmitting(false);
     }
@@ -129,6 +190,25 @@ export function BulkGenerateDialog({
             <Input id="start_index" type="number" placeholder="1" {...register("start_index")} />
             {errors.start_index && (
               <p className="text-sm text-destructive">{errors.start_index.message}</p>
+            )}
+            {isCollision && (
+              <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs flex flex-col gap-2 font-medium animate-in fade-in-0">
+                <div className="flex items-center gap-1.5">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                  <span>Mã cây <strong>'{sampleStartCode}'</strong> đã tồn tại!</span>
+                </div>
+                <div className="flex items-center justify-between gap-2 pt-1 border-t border-amber-200/60">
+                  <span className="text-[11px] text-amber-700">Chỉ số tự do tiếp theo: <strong>{nextAvailableIndex}</strong></span>
+                  <button
+                    type="button"
+                    onClick={() => setValue("start_index", nextAvailableIndex, { shouldValidate: true })}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-600 text-white text-[11px] font-bold hover:bg-amber-700 transition-colors shadow-xs cursor-pointer"
+                  >
+                    <Sparkles className="h-3 w-3" />
+                    Dùng ngay {nextAvailableIndex}
+                  </button>
+                </div>
+              </div>
             )}
           </div>
 

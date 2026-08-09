@@ -173,9 +173,16 @@ export default function PlantDetailPage() {
                 </div>
               </div>
               <div>
-                <div className="text-sm font-medium text-muted-foreground">{t("createPlant.gridXLabel")} / Y</div>
+                <div className="text-sm font-medium text-muted-foreground">Tọa độ Bản đồ (GIS)</div>
                 <div className="mt-1">
-                  {plant.grid_x !== null ? `${plant.grid_x}, ${plant.grid_y}` : "N/A"}
+                  {plant.grid_x != null && plant.grid_x > 100 ? (
+                    <div className="text-sm">
+                      <div>Vĩ độ: <span className="font-semibold">{plant.grid_y}</span></div>
+                      <div>Kinh độ: <span className="font-semibold">{plant.grid_x}</span></div>
+                    </div>
+                  ) : (
+                    "Chưa ghim trên bản đồ"
+                  )}
                 </div>
               </div>
               <div>

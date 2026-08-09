@@ -12,8 +12,8 @@ import { ArrowLeft, Map as MapIcon } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ZonesPanel } from "./zones-panel";
+import { PlantsPanel } from "./plants-panel";
 import { SchedulesPanel } from "@/components/schedules/schedules-panel";
-import { VirtualZoneGrid } from "@/components/gardens/virtual-zone-grid";
 import { useTranslation } from "@/components/i18n-provider";
 
 // Load GardenMap dynamically to avoid SSR issues with Leaflet
@@ -37,6 +37,7 @@ export default function GardenDetailPage() {
   const queryClient = useQueryClient();
 
   const [activeZoneId, setActiveZoneId] = useState<string | null>(null);
+  const [activePlantId, setActivePlantId] = useState<string | null>(null);
 
   const { data: garden, isLoading } = useQuery<GardenDetail>({
     queryKey: queryKeys.gardenDetail(id),
@@ -50,7 +51,7 @@ export default function GardenDetailPage() {
 
   const { data: plantsData } = useQuery<{ items: Plant[] }>({
     queryKey: ["plants_grid", id],
-    queryFn: () => api.get(`api/gardens/${id}/plants?limit=500`).json(),
+    queryFn: () => api.get(`api/gardens/${id}/plants?limit=100`).json(),
   });
 
   const updateBoundaryMutation = useMutation({
@@ -85,6 +86,26 @@ export default function GardenDetailPage() {
       } catch (e) {
         console.error("Storage error:", e);
       }
+    },
+  });
+
+  const updatePlantPositionMutation = useMutation({
+    mutationFn: async ({ plantId, grid_x, grid_y }: { plantId: string; grid_x: number; grid_y: number }) => {
+      const targetPlant = plantsData?.items.find((p) => p.id === plantId);
+      if (!targetPlant) throw new Error("Plant not found");
+      return api.put(`api/plants/${plantId}`, {
+        json: {
+          code: targetPlant.code,
+          status: targetPlant.status,
+          zone_id: targetPlant.zone_id,
+          grid_x: grid_x,
+          grid_y: grid_y,
+        },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["plants_grid", id] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.plants(id) });
     },
   });
 
@@ -142,16 +163,31 @@ export default function GardenDetailPage() {
             zones={zones}
             plants={plantsData?.items}
             activeZoneId={activeZoneId}
+            activePlantId={activePlantId}
             onDeleteZone={(zId) => deleteZoneMutation.mutate(zId)}
+            onUpdatePlantPosition={(plantId, lat, lng) => 
+              updatePlantPositionMutation.mutate({ plantId, grid_x: lng, grid_y: lat })
+            }
           />
         </div>
 
         <div className="lg:col-span-1">
-          <Tabs defaultValue="zones" className="w-full">
-            <TabsList className="w-full grid grid-cols-2">
+          <Tabs defaultValue="plants" className="w-full">
+            <TabsList className="w-full grid grid-cols-3">
+              <TabsTrigger value="plants">Cây trồng ({plantsData?.items?.length || 0})</TabsTrigger>
               <TabsTrigger value="zones">{t("gardenDetail.tabZones")}</TabsTrigger>
               <TabsTrigger value="schedules">{t("gardenDetail.tabSchedules")}</TabsTrigger>
             </TabsList>
+            <TabsContent value="plants" className="mt-4">
+              <PlantsPanel
+                gardenId={id}
+                plants={plantsData?.items}
+                zones={zones}
+                activePlantId={activePlantId}
+                onSelectPlant={(pId) => setActivePlantId(pId)}
+                onRefetchPlants={() => queryClient.invalidateQueries({ queryKey: ["plants_grid", id] })}
+              />
+            </TabsContent>
             <TabsContent value="zones" className="mt-4">
               <ZonesPanel
                 gardenId={id}
@@ -166,10 +202,6 @@ export default function GardenDetailPage() {
         </div>
       </div>
 
-      {/* Virtual Garden Grid Section */}
-      <div className="pt-4">
-        <VirtualZoneGrid gardenId={id} zones={zones} />
-      </div>
     </div>
   );
 }

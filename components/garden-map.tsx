@@ -8,7 +8,7 @@ import "@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css";
 import { GardenBoundary, Plant, Zone } from "@/types";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { Save, Search, MapPin, Loader2, X, Layers, Check, Undo2 } from "lucide-react";
+import { Save, Search, MapPin, Loader2, X, Layers, Check, Undo2, Grid, Map as MapIcon } from "lucide-react";
 import { PLANT_STATUS_COLORS } from "./plant-status-badge";
 import { toast } from "sonner";
 import { useTranslation } from "@/components/i18n-provider";
@@ -47,8 +47,10 @@ interface GardenMapProps {
   plants?: Plant[];
   zones?: Zone[];
   activeZoneId?: string | null;
+  activePlantId?: string | null;
   readOnly?: boolean;
   onDeleteZone?: (zoneId: string) => void;
+  onUpdatePlantPosition?: (plantId: string, lat: number, lng: number) => void;
 }
 
 // Generate default initial zone polygon points if user hasn't saved custom boundary yet
@@ -111,8 +113,10 @@ export default function GardenMap({
   plants,
   zones,
   activeZoneId,
+  activePlantId,
   readOnly = false,
   onDeleteZone,
+  onUpdatePlantPosition,
 }: GardenMapProps) {
   const { t } = useTranslation();
   const mapRef = useRef<HTMLDivElement>(null);
@@ -131,6 +135,8 @@ export default function GardenMap({
 
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
+  const [mapMode, setMapMode] = useState<"blueprint" | "street" | "satellite">("blueprint");
+  const activeTileLayerRef = useRef<L.TileLayer | null>(null);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -199,13 +205,10 @@ export default function GardenMap({
     if (!mapRef.current) return;
     if (leafletMap.current) return;
 
-    // Initialize map
-    const map = L.map(mapRef.current).setView([10.762622, 106.660172], 13); // Default to HCMC
+    // Initialize map with maxZoom 22 for deep zoom capability
+    const map = L.map(mapRef.current, { maxZoom: 22 }).setView([10.762622, 106.660172], 18);
 
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      attribution: "© OpenStreetMap",
-    }).addTo(map);
+    leafletMap.current = map;
 
     if (!readOnly) {
       map.pm.addControls({
@@ -292,6 +295,37 @@ export default function GardenMap({
     }
     setShowDropdown(false);
   };
+
+  // Switch TileLayers dynamically based on mapMode
+  useEffect(() => {
+    const map = leafletMap.current;
+    if (!map) return;
+
+    if (activeTileLayerRef.current) {
+      map.removeLayer(activeTileLayerRef.current);
+    }
+
+    if (mapMode === "satellite") {
+      activeTileLayerRef.current = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+        maxZoom: 22,
+        maxNativeZoom: 19,
+        attribution: "© Esri World Imagery",
+      }).addTo(map);
+    } else if (mapMode === "blueprint") {
+      const svgGrid = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" fill="%23f8fafc"/><path d="M 64 0 L 0 0 0 64" fill="none" stroke="%23cbd5e1" stroke-width="0.8"/><path d="M 32 0 L 32 64 M 0 32 L 64 32" fill="none" stroke="%23f1f5f9" stroke-width="0.4"/></svg>`;
+      activeTileLayerRef.current = L.tileLayer(svgGrid, {
+        maxZoom: 22,
+        tileSize: 64,
+        attribution: "Sơ đồ Phẳng 2D Kiến Trúc",
+      }).addTo(map);
+    } else {
+      activeTileLayerRef.current = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 22,
+        maxNativeZoom: 19,
+        attribution: "© OpenStreetMap",
+      }).addTo(map);
+    }
+  }, [mapMode]);
 
   // Handle boundary, zones, and plants when they change
   useEffect(() => {
@@ -423,33 +457,129 @@ export default function GardenMap({
       const nw = bounds.getNorthWest();
 
       plants.forEach((plant) => {
-        const latOffset = (plant.grid_y || 0) * 0.00005;
-        const lngOffset = (plant.grid_x || 0) * 0.00005;
-
-        const pLat = nw.lat - latOffset;
-        const pLng = nw.lng + lngOffset;
+        let pLat, pLng;
+        const zonePoly = plant.zone_id ? zonePolyMapRef.current.get(plant.zone_id) : null;
+        
+        if (plant.grid_x != null && plant.grid_y != null && plant.grid_x > 100 && plant.grid_y > 8) {
+          pLat = plant.grid_y;
+          pLng = plant.grid_x;
+        } 
+        else if (zonePoly) {
+          const zBounds = zonePoly.getBounds();
+          const center = zBounds.getCenter();
+          pLat = center.lat + (Math.random() - 0.5) * 0.0001;
+          pLng = center.lng + (Math.random() - 0.5) * 0.0001;
+        } else {
+          const center = bounds.getCenter();
+          pLat = center.lat + (Math.random() - 0.5) * 0.0001;
+          pLng = center.lng + (Math.random() - 0.5) * 0.0001;
+        }
 
         const color = PLANT_STATUS_COLORS[plant.status]?.hex || PLANT_STATUS_COLORS.UNKNOWN.hex;
+        const isActive = activePlantId === plant.id;
+        const radius = isActive ? 22 : 16;
 
-        const marker = L.circleMarker([pLat, pLng], {
-          radius: 7,
-          fillColor: color,
-          color: "#fff",
-          weight: 2,
-          fillOpacity: 1,
+        let customIcon: L.DivIcon;
+
+        if (mapMode === "blueprint") {
+          customIcon = L.divIcon({
+            className: "bg-transparent border-0",
+            html: `<div style="
+              display: flex;
+              align-items: center;
+              gap: 5px;
+              padding: 3px 8px;
+              background-color: ${isActive ? '#fef2f2' : '#ffffff'};
+              border: 2px solid ${isActive ? '#ef4444' : color};
+              border-radius: 20px;
+              box-shadow: 0 3px 8px rgba(0,0,0,0.18);
+              white-space: nowrap;
+              font-family: inherit;
+              font-size: 11px;
+              font-weight: 700;
+              color: #0f172a;
+              transform: scale(${isActive ? 1.15 : 1});
+              transition: transform 0.15s ease;
+            ">
+              <span style="
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                background-color: ${color};
+                display: inline-block;
+                box-shadow: inset 0 0 2px rgba(0,0,0,0.2);
+              "></span>
+              <span>${plant.code}</span>
+            </div>`,
+            iconSize: [80, 26],
+            iconAnchor: [40, 13],
+            popupAnchor: [0, -13],
+          });
+        } else {
+          customIcon = L.divIcon({
+            className: "bg-transparent border-0",
+            html: `<div style="
+              width: ${radius}px; 
+              height: ${radius}px; 
+              background-color: ${color}; 
+              border: ${isActive ? '3px' : '2px'} solid ${isActive ? '#ef4444' : '#ffffff'}; 
+              border-radius: 50%;
+              box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            "></div>`,
+            iconSize: [radius, radius],
+            iconAnchor: [radius / 2, radius / 2],
+            popupAnchor: [0, -radius / 2],
+          });
+        }
+
+        const marker = L.marker([pLat, pLng], {
+          icon: customIcon,
+          draggable: !readOnly,
         });
 
+        if (!readOnly && onUpdatePlantPosition) {
+          marker.on("dragend", (e) => {
+            const newPos = e.target.getLatLng();
+            onUpdatePlantPosition(plant.id, newPos.lat, newPos.lng);
+            toast.success(`Đã cập nhật vị trí cây ${plant.code}`);
+          });
+        }
+
+        const statusKey = `status.${(plant.status || "unknown").toLowerCase()}` as any;
+        const statusLabel = t(statusKey, plant.status || "Unknown");
+        const zoneName = zones?.find(z => z.id === plant.zone_id)?.name || "N/A";
+        const isGis = plant.grid_x != null && plant.grid_x > 100;
+        const displayLat = isGis ? plant.grid_y : "?";
+        const displayLng = isGis ? plant.grid_x : "?";
+
         const popupHtml = `
-          <div class="p-1 min-w-[150px] font-sans">
-            <div class="font-bold text-sm mb-1">${plant.code}</div>
-            <div class="text-xs mb-1 font-medium">Status: ${plant.status}</div>
-            <div class="text-xs text-gray-500 mb-2">Planted: ${plant.planted_at || "N/A"}</div>
-            <a href="/plants/${plant.id}" class="text-xs text-blue-600 hover:underline">View Details →</a>
+          <div class="p-2 min-w-[180px] font-sans">
+            <div class="flex items-center justify-between gap-2 mb-1">
+              <strong class="font-bold text-sm text-slate-900">${plant.code}</strong>
+              <span class="text-[10px] px-1.5 py-0.5 rounded font-semibold text-white" style="background-color: ${color};">
+                ${statusLabel}
+              </span>
+            </div>
+            <div class="text-xs text-slate-600 mb-0.5"><strong>Phân khu:</strong> ${zoneName}</div>
+            <div class="text-[11px] text-slate-500 mb-2 font-mono">
+              <div class="truncate">Vĩ độ: ${displayLat}</div>
+              <div class="truncate">Kinh độ: ${displayLng}</div>
+            </div>
+            <a href="/plants/${plant.id}" class="inline-flex items-center text-xs font-semibold text-emerald-600 hover:text-emerald-700 hover:underline">
+              Xem nhật ký & chi tiết →
+            </a>
           </div>
         `;
 
         marker.bindPopup(popupHtml);
         plantsGroup.current?.addLayer(marker);
+
+        if (isActive) {
+          map.flyTo([pLat, pLng], Math.max(map.getZoom(), 18), { animate: true, duration: 0.8 });
+          setTimeout(() => {
+            marker.openPopup();
+          }, 300);
+        }
       });
     }
 
@@ -620,6 +750,46 @@ export default function GardenMap({
           </div>
         </div>
       )}
+
+      {/* View Mode Switcher Toolbar (Bottom Left) */}
+      <div className="absolute bottom-4 left-4 z-[400] pointer-events-auto flex items-center gap-1 rounded-xl border border-slate-200 bg-white/95 p-1 shadow-lg backdrop-blur-md">
+        <button
+          type="button"
+          onClick={() => setMapMode("blueprint")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            mapMode === "blueprint"
+              ? "bg-emerald-600 text-white shadow-xs"
+              : "text-slate-700 hover:bg-slate-100 hover:text-slate-900"
+          }`}
+        >
+          <Grid className="h-3.5 w-3.5" />
+          <span>📐 Sơ đồ Phẳng 2D</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setMapMode("street")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            mapMode === "street"
+              ? "bg-emerald-600 text-white shadow-xs"
+              : "text-slate-700 hover:bg-slate-100 hover:text-slate-900"
+          }`}
+        >
+          <MapIcon className="h-3.5 w-3.5" />
+          <span>🌐 Địa lý (OSM)</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setMapMode("satellite")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            mapMode === "satellite"
+              ? "bg-emerald-600 text-white shadow-xs"
+              : "text-slate-700 hover:bg-slate-100 hover:text-slate-900"
+          }`}
+        >
+          <Layers className="h-3.5 w-3.5" />
+          <span>🛰️ Ảnh Vệ tinh</span>
+        </button>
+      </div>
 
       <div ref={mapRef} className="h-full w-full z-0" />
     </div>

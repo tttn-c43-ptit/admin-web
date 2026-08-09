@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Sprout } from "lucide-react";
 
 interface LogoProps {
@@ -10,12 +9,10 @@ interface LogoProps {
 }
 
 export function Logo({ showText = true, className = "", size = "md" }: LogoProps) {
-  const [imgError, setImgError] = useState(false);
-
   const containerSizes = {
-    sm: "h-7 w-7 rounded-md p-0.5",
-    md: "h-9 w-9 rounded-lg p-1",
-    lg: "h-11 w-11 rounded-xl p-1.5",
+    sm: "h-7 w-7 rounded-md p-1",
+    md: "h-8 w-8 rounded-lg p-1.5",
+    lg: "h-10 w-10 rounded-xl p-2",
   };
 
   const iconSizes = {
@@ -31,21 +28,13 @@ export function Logo({ showText = true, className = "", size = "md" }: LogoProps
   };
 
   return (
-    <div className={`flex items-center gap-3 ${className}`}>
-      <div className={`bg-emerald-600/10 border border-emerald-500/20 shadow-xs flex items-center justify-center overflow-hidden shrink-0 ${containerSizes[size]}`}>
-        {!imgError ? (
-          <img
-            src="/images/logo.png"
-            alt="PlantCare Logo"
-            className="h-full w-full object-contain"
-            onError={() => setImgError(true)}
-          />
-        ) : (
-          <Sprout className={`${iconSizes[size]} text-emerald-600`} />
-        )}
+    <div className={`flex items-center gap-2.5 select-none ${className}`}>
+      {/* Premium Green Badge Logo (Pure Vector - 0ms Load, Never Breaks on F5) */}
+      <div className={`bg-gradient-to-br from-emerald-600 via-green-600 to-teal-700 text-white shadow-xs border border-emerald-500/30 flex items-center justify-center shrink-0 ${containerSizes[size]}`}>
+        <Sprout className={`${iconSizes[size]} text-white drop-shadow-xs`} />
       </div>
       {showText && (
-        <span className={`font-bold tracking-tight text-emerald-950 dark:text-emerald-50 ${textSizes[size]}`}>
+        <span className={`font-bold tracking-tight bg-gradient-to-r from-emerald-950 via-green-900 to-teal-950 dark:from-emerald-100 dark:to-green-300 bg-clip-text text-transparent ${textSizes[size]}`}>
           PlantCare
         </span>
       )}
