@@ -102,14 +102,16 @@ export default function PlantDetailPage() {
     }
   };
 
+  const [activeTag, setActiveTag] = useState<Tag | null>(null);
+  const currentActiveTag = activeTag || plant?.current_tag;
+
   useEffect(() => {
-    if (plant?.current_tag) {
-      const tag = plant.current_tag;
-      if (tag.tag_type === "QR") {
-        QRCode.toDataURL(tag.tag_code, { width: 150, margin: 1 }).then(setTagImage);
+    if (currentActiveTag) {
+      if (currentActiveTag.tag_type === "QR") {
+        QRCode.toDataURL(currentActiveTag.tag_code, { width: 150, margin: 1 }).then(setTagImage);
       } else {
         const canvas = document.createElement("canvas");
-        JsBarcode(canvas, tag.tag_code, { format: "CODE128", width: 2, height: 50, displayValue: true });
+        JsBarcode(canvas, currentActiveTag.tag_code, { format: "CODE128", width: 2, height: 50, displayValue: true });
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setTagImage(canvas.toDataURL("image/png"));
       }
@@ -117,7 +119,7 @@ export default function PlantDetailPage() {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setTagImage("");
     }
-  }, [plant?.current_tag]);
+  }, [currentActiveTag]);
 
   if (isPlantLoading) {
     return <div className="p-8 text-center">{t("plantDetail.loading")}</div>;
@@ -199,12 +201,12 @@ export default function PlantDetailPage() {
             <QrCode className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent className="flex flex-col items-center text-center">
-            {tagImage ? (
+            {tagImage && currentActiveTag ? (
               <>
                 <img src={tagImage} alt="Plant Tag" className="mb-4 max-w-[150px]" />
-                <div className="text-sm font-medium mb-1">{plant.current_tag?.tag_code}</div>
+                <div className="text-sm font-bold mb-1">{currentActiveTag.tag_code}</div>
                 <div className="text-xs text-muted-foreground mb-4">
-                  {plant.current_tag?.tag_type} • {plant.current_tag?.status}
+                  {currentActiveTag.tag_type} • {currentActiveTag.status}
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={() => setIsTagManagerOpen(true)}>
@@ -362,8 +364,11 @@ export default function PlantDetailPage() {
         open={isTagManagerOpen}
         onOpenChange={setIsTagManagerOpen}
         plant={plant}
-        currentTag={plant.current_tag}
-        onSuccess={refetchPlant}
+        currentTag={currentActiveTag}
+        onSuccess={(newTag) => {
+          if (newTag) setActiveTag(newTag);
+          refetchPlant();
+        }}
       />
 
       {plant && (

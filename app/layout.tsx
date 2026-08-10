@@ -4,6 +4,7 @@ import "./globals.css";
 import { cn } from "@/lib/utils";
 import ReactQueryProvider from "@/lib/react-query";
 import { LanguageProvider } from "@/components/i18n-provider";
+import { Toaster } from "@/components/ui/sonner";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -35,7 +36,10 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-surface text-foreground transition-colors duration-200">
         <LanguageProvider>
-          <ReactQueryProvider>{children}</ReactQueryProvider>
+          <ReactQueryProvider>
+            {children}
+            <Toaster position="top-right" richColors />
+          </ReactQueryProvider>
         </LanguageProvider>
       </body>
     </html>

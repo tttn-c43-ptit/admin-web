@@ -408,6 +408,8 @@ export default function GardenMap({
         const savedPoints = savedZoneBoundaries[zone.id];
         const zonePoints = savedPoints && savedPoints.length > 0
           ? savedPoints
+          : zone.boundary && zone.boundary.coordinates && zone.boundary.coordinates.length > 0
+          ? zone.boundary.coordinates[0].map(([lng, lat]) => [lat, lng] as [number, number])
           : generateZonePolygonPoints(gardenLatLngs, idx, zones.length);
 
         const colorScheme = ZONE_COLORS[idx % ZONE_COLORS.length];
@@ -492,60 +494,23 @@ export default function GardenMap({
 
         const color = PLANT_STATUS_COLORS[plant.status]?.hex || PLANT_STATUS_COLORS.UNKNOWN.hex;
         const isActive = activePlantId === plant.id;
-        const radius = isActive ? 22 : 16;
+        const dotSize = isActive ? 18 : 12;
 
-        let customIcon: L.DivIcon;
-
-        if (mapMode === "blueprint") {
-          customIcon = L.divIcon({
-            className: "bg-transparent border-0",
-            html: `<div style="
-              display: flex;
-              align-items: center;
-              gap: 5px;
-              padding: 3px 8px;
-              background-color: ${isActive ? '#fef2f2' : '#ffffff'};
-              border: 2px solid ${isActive ? '#ef4444' : color};
-              border-radius: 20px;
-              box-shadow: 0 3px 8px rgba(0,0,0,0.18);
-              white-space: nowrap;
-              font-family: inherit;
-              font-size: 11px;
-              font-weight: 700;
-              color: #0f172a;
-              transform: scale(${isActive ? 1.15 : 1});
-              transition: transform 0.15s ease;
-            ">
-              <span style="
-                width: 10px;
-                height: 10px;
-                border-radius: 50%;
-                background-color: ${color};
-                display: inline-block;
-                box-shadow: inset 0 0 2px rgba(0,0,0,0.2);
-              "></span>
-              <span>${plant.code}</span>
-            </div>`,
-            iconSize: [80, 26],
-            iconAnchor: [40, 13],
-            popupAnchor: [0, -13],
-          });
-        } else {
-          customIcon = L.divIcon({
-            className: "bg-transparent border-0",
-            html: `<div style="
-              width: ${radius}px; 
-              height: ${radius}px; 
-              background-color: ${color}; 
-              border: ${isActive ? '3px' : '2px'} solid ${isActive ? '#ef4444' : '#ffffff'}; 
-              border-radius: 50%;
-              box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-            "></div>`,
-            iconSize: [radius, radius],
-            iconAnchor: [radius / 2, radius / 2],
-            popupAnchor: [0, -radius / 2],
-          });
-        }
+        const customIcon = L.divIcon({
+          className: "bg-transparent border-0",
+          html: `<div style="
+            width: ${dotSize}px; 
+            height: ${dotSize}px; 
+            background-color: ${color}; 
+            border: ${isActive ? '3px' : '2px'} solid ${isActive ? '#ef4444' : '#ffffff'}; 
+            border-radius: 50%;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.35);
+            cursor: pointer;
+          "></div>`,
+          iconSize: [dotSize, dotSize],
+          iconAnchor: [dotSize / 2, dotSize / 2],
+          popupAnchor: [0, -dotSize / 2],
+        });
 
         const marker = L.marker([pLat, pLng], {
           icon: customIcon,
@@ -640,6 +605,21 @@ export default function GardenMap({
             </a>
           </div>
         `;
+
+        // Hover Tooltip: Display plant code & zone when hovering over dot marker
+        marker.bindTooltip(
+          `<div class="px-2 py-1 font-sans text-xs flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full inline-block" style="background-color: ${color};"></span>
+            <strong class="font-bold text-slate-900">${plant.code}</strong>
+            <span class="text-slate-500">(${zoneName})</span>
+          </div>`,
+          {
+            permanent: false,
+            sticky: true,
+            direction: "top",
+            className: "bg-white/95 border border-slate-300 rounded shadow-md font-sans text-xs pointer-events-none",
+          }
+        );
 
         marker.bindPopup(popupHtml);
         plantsGroup.current?.addLayer(marker);

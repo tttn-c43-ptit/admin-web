@@ -29,7 +29,7 @@ export function WeeklyTrendChart({ stats }: WeeklyTrendChartProps) {
     <div className="rounded-xl border bg-card text-card-foreground shadow-sm p-6 flex flex-col h-full">
       <h3 className="font-semibold leading-none tracking-tight mb-6">{t("chart.weeklyReportTrend")}</h3>
       <div className="h-[250px] w-full mt-auto">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer minWidth={0} width="100%" height="100%">
           <AreaChart
             data={data}
             margin={{ top: 10, right: 10, left: -20, bottom: 0 }}

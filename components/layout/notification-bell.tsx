@@ -30,7 +30,8 @@ export function NotificationBell() {
         const data = await api.get("api/notifications/unread-count").json<UnreadCount>();
         setUnreadCount(data.unread);
       } catch (error: any) {
-        if (error?.response?.status !== 401) {
+        // Silently ignore network errors during background polling (e.g. server restart)
+        if (error?.name !== "TypeError" && error?.response?.status !== 401) {
           console.error("Failed to fetch unread count", error);
         }
       }

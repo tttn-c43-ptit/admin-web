@@ -54,7 +54,7 @@ export function ZoneStatsChart({ stats }: ZoneStatsChartProps) {
     <div className="rounded-xl border bg-card text-card-foreground shadow-sm p-6 flex flex-col h-full">
       <h3 className="font-semibold leading-none tracking-tight mb-6">{t("chart.zoneStats")}</h3>
       <div className="h-[300px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer minWidth={0} width="100%" height="100%">
           <BarChart
             data={data}
             margin={{ top: 20, right: 30, left: -20, bottom: 5 }}

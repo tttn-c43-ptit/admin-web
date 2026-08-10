@@ -8,7 +8,8 @@ import { apiClient as api } from "@/lib/api-client";
 import { localToUtcCron, parseUtcCronToLocalForm } from "@/lib/cron-utils";
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
-import { Zone, ScheduleOut } from "@/types";
+import { Zone, ScheduleOut, Garden, PaginatedResponse } from "@/types";
+import { toast } from "sonner";
 
 import {
   Dialog,
@@ -39,6 +40,7 @@ import { CalendarClock, Loader2 } from "lucide-react";
 import { useTranslation } from "@/components/i18n-provider";
 
 const scheduleSchema = z.object({
+  garden_id: z.string().optional(),
   type: z.enum(["WATER", "FERTILIZE", "SPRAY", "INSPECT", "HARVEST", "OTHER"]),
   description: z.string().max(5000).optional(),
   zone_id: z.string().uuid("Invalid Zone ID").optional().or(z.literal("")),
@@ -51,7 +53,7 @@ const scheduleSchema = z.object({
 type ScheduleFormValues = z.infer<typeof scheduleSchema>;
 
 interface ScheduleFormDialogProps {
-  gardenId: string;
+  gardenId?: string;
   initialData?: ScheduleOut;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -59,7 +61,14 @@ interface ScheduleFormDialogProps {
   onSuccess?: () => void;
 }
 
-export function ScheduleFormDialog({ gardenId, initialData, open: controlledOpen, onOpenChange: setControlledOpen, trigger, onSuccess }: ScheduleFormDialogProps) {
+export function ScheduleFormDialog({
+  gardenId: propGardenId,
+  initialData,
+  open: controlledOpen,
+  onOpenChange: setControlledOpen,
+  trigger,
+  onSuccess,
+}: ScheduleFormDialogProps) {
   const { t } = useTranslation();
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = controlledOpen !== undefined ? controlledOpen : uncontrolledOpen;
@@ -67,21 +76,27 @@ export function ScheduleFormDialog({ gardenId, initialData, open: controlledOpen
 
   const isEditing = !!initialData;
   const [isSubmitting, setIsSubmitting] = useState(false);
+
   const { data: user } = useQuery({
     queryKey: queryKeys.me(),
     queryFn: () => api.get("api/auth/me").json<{ role: string }>(),
   });
   const role = user?.role;
 
-  const { data: zones } = useQuery<Zone[]>({
-    queryKey: queryKeys.zones(gardenId),
-    queryFn: () => api.get(`api/gardens/${gardenId}/zones`).json(),
+  // Fetch gardens if propGardenId is not provided
+  const { data: gardensData } = useQuery<PaginatedResponse<Garden>>({
+    queryKey: queryKeys.gardens(),
+    queryFn: () => api.get("api/gardens?limit=100&offset=0").json<PaginatedResponse<Garden>>(),
+    enabled: !propGardenId,
   });
+
+  const gardens = gardensData?.items ?? [];
 
   const defaultValues = (() => {
     if (initialData) {
       const parsedCron = parseUtcCronToLocalForm(initialData.cron_expr);
       return {
+        garden_id: propGardenId || initialData.garden_id || "",
         type: initialData.type as any,
         description: initialData.description || "",
         zone_id: initialData.zone_id || "",
@@ -92,6 +107,7 @@ export function ScheduleFormDialog({ gardenId, initialData, open: controlledOpen
       };
     }
     return {
+      garden_id: propGardenId || "",
       type: "WATER",
       description: "",
       zone_id: "",
@@ -107,19 +123,42 @@ export function ScheduleFormDialog({ gardenId, initialData, open: controlledOpen
     defaultValues: defaultValues as any,
   });
 
+  const selectedGardenId = propGardenId || form.watch("garden_id") || (gardens.length > 0 ? gardens[0].id : "");
+
+  // Fetch zones for selected garden
+  const { data: zones } = useQuery<Zone[]>({
+    queryKey: queryKeys.zones(selectedGardenId),
+    queryFn: () => api.get(`api/gardens/${selectedGardenId}/zones`).json(),
+    enabled: !!selectedGardenId,
+  });
+
   // Reset form when dialog opens if editing
   useEffect(() => {
     if (open) {
-      form.reset(defaultValues as any);
+      form.reset({
+        ...defaultValues,
+        garden_id: selectedGardenId,
+      } as any);
     }
   }, [open, initialData]);
 
   const frequency = form.watch("frequency");
 
   const onSubmit = async (data: ScheduleFormValues) => {
+    const targetGardenId = propGardenId || data.garden_id || selectedGardenId;
+    if (!targetGardenId) {
+      toast.error("Vui lòng chọn nhà vườn");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      let cron_expr = localToUtcCron(data.frequency, data.time, data.dayOfWeek || "1", data.dayOfMonth || "1");
+      let cron_expr = localToUtcCron(
+        data.frequency,
+        data.time,
+        data.dayOfWeek || "1",
+        data.dayOfMonth || "1"
+      );
 
       const payload = {
         type: data.type,
@@ -131,21 +170,24 @@ export function ScheduleFormDialog({ gardenId, initialData, open: controlledOpen
 
       if (isEditing) {
         await api.put(`api/schedules/${initialData.id}`, { json: payload });
+        toast.success("Đã cập nhật lịch định kỳ!");
       } else {
-        await api.post(`api/gardens/${gardenId}/schedules`, { json: payload });
+        await api.post(`api/gardens/${targetGardenId}/schedules`, { json: payload });
+        toast.success("Tạo lịch định kỳ thành công!");
       }
-      
+
       form.reset();
       setOpen(false);
       onSuccess?.();
     } catch (error) {
       console.error("Failed to save schedule", error);
+      toast.error("Lỗi khi lưu lịch định kỳ");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (role !== "OWNER") {
+  if (user && role !== "OWNER") {
     return null;
   }
 
@@ -154,30 +196,65 @@ export function ScheduleFormDialog({ gardenId, initialData, open: controlledOpen
       {trigger ? (
         <DialogTrigger render={trigger} />
       ) : (
-        <DialogTrigger render={
-          <Button variant="outline">
-            <CalendarClock className="mr-2 h-4 w-4" />
-            {t("schedules.createTitle")}
-          </Button>
-        } />
+        <DialogTrigger
+          render={
+            <Button variant="outline" className="flex items-center gap-2">
+              <CalendarClock className="h-4 w-4 text-purple-600" />
+              <span>{t("schedules.createTitle")}</span>
+            </Button>
+          }
+        />
       )}
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{isEditing ? t("schedules.editTitle") : t("schedules.createTitle")}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? t("schedules.editTitle") : t("schedules.createTitle")}
+          </DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {/* Garden Select if not fixed by propGardenId */}
+            {!propGardenId && !isEditing && (
+              <FormField
+                control={form.control}
+                name="garden_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nhà vườn</FormLabel>
+                    <Select
+                      onValueChange={(val) => {
+                        field.onChange(val);
+                        form.setValue("zone_id", "");
+                      }}
+                      value={field.value || selectedGardenId}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Chọn nhà vườn..." />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {gardens.map((g) => (
+                          <SelectItem key={g.id} value={g.id}>
+                            {g.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
             <FormField
               control={form.control}
               name="type"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>{t("tasks.colType")}</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
-                  >
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder={t("taskForm.selectType")} />
@@ -203,10 +280,7 @@ export function ScheduleFormDialog({ gardenId, initialData, open: controlledOpen
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>{t("schedules.frequency")}</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
-                  >
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder={t("schedules.frequency")} />
@@ -245,10 +319,7 @@ export function ScheduleFormDialog({ gardenId, initialData, open: controlledOpen
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>{t("schedules.dayOfWeek")}</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                      >
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder={t("schedules.dayOfWeek")} />
@@ -278,12 +349,7 @@ export function ScheduleFormDialog({ gardenId, initialData, open: controlledOpen
                     <FormItem>
                       <FormLabel>{t("schedules.dayOfMonth")}</FormLabel>
                       <FormControl>
-                        <Input
-                          type="number"
-                          min={1}
-                          max={31}
-                          {...field}
-                        />
+                        <Input type="number" min={1} max={31} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -298,14 +364,14 @@ export function ScheduleFormDialog({ gardenId, initialData, open: controlledOpen
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>{t("schedules.applyZone")}</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
-                  >
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder={t("schedules.allZones")}>
-                          {field.value ? zones?.find(z => z.id === field.value)?.name || t("schedules.allZones") : t("schedules.allZones")}
+                          {field.value
+                            ? zones?.find((z) => z.id === field.value)?.name ||
+                              t("schedules.allZones")
+                            : t("schedules.allZones")}
                         </SelectValue>
                       </SelectTrigger>
                     </FormControl>
@@ -342,15 +408,17 @@ export function ScheduleFormDialog({ gardenId, initialData, open: controlledOpen
 
             <div className="flex justify-end pt-4">
               <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {t("action.saving")}
-                </>
-              ) : (
-                isEditing ? t("action.save") : t("action.create")
-              )}
-            </Button>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {t("action.saving")}
+                  </>
+                ) : isEditing ? (
+                  t("action.save")
+                ) : (
+                  t("action.create")
+                )}
+              </Button>
             </div>
           </form>
         </Form>

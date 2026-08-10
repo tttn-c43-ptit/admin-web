@@ -41,7 +41,7 @@ export function StatusBreakdownChart({ stats }: StatusBreakdownChartProps) {
     <div className="rounded-xl border bg-card text-card-foreground shadow-sm p-6 flex flex-col">
       <h3 className="font-semibold leading-none tracking-tight mb-6">{t("chart.statusBreakdown")}</h3>
       <div className="h-[250px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer minWidth={0} width="100%" height="100%">
           <PieChart>
             <Pie
               data={data}

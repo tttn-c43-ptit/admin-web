@@ -145,6 +145,41 @@ export default function HarvestsPage() {
     enabled: !!selectedPlantId && selectedPlantId.trim() !== "",
   });
 
+  // Fetch harvests across all plants in the garden for daily breakdown
+  const { data: allGardenHarvests } = useQuery<Harvest[]>({
+    queryKey: ["harvests", gardenId, "all-plants-harvests", plantsData?.items?.map((p) => p.id)],
+    queryFn: async () => {
+      const plants = plantsData?.items || [];
+      if (plants.length === 0) return [];
+      const results = await Promise.all(
+        plants.map((plant) =>
+          api
+            .get(`api/plants/${plant.id}/harvests`, { searchParams: { limit: 100 } })
+            .json<PaginatedResponse<Harvest>>()
+            .then((res) => res.items)
+            .catch(() => [])
+        )
+      );
+      return results.flat();
+    },
+    enabled: !!gardenId && !!plantsData?.items,
+  });
+
+  // Calculate daily harvests
+  const dailyHarvestList = (() => {
+    if (!allGardenHarvests || allGardenHarvests.length === 0) return [];
+    const map: Record<string, { date: string; quantity_kg: number; records: number }> = {};
+    allGardenHarvests.forEach((h) => {
+      const dateKey = format(new Date(h.harvested_at), "yyyy-MM-dd");
+      if (!map[dateKey]) {
+        map[dateKey] = { date: format(new Date(h.harvested_at), "dd/MM/yyyy"), quantity_kg: 0, records: 0 };
+      }
+      map[dateKey].quantity_kg += h.quantity_kg;
+      map[dateKey].records += 1;
+    });
+    return Object.values(map).sort((a, b) => b.date.localeCompare(a.date));
+  })();
+
   // Helper to format plant code nicely (avoid raw 36-char UUID)
   const getPlantCode = (plantId: string) => {
     const plant = plantsData?.items.find((p) => p.id === plantId);
@@ -173,7 +208,15 @@ export default function HarvestsPage() {
     {
       accessorKey: "quality",
       header: t("harvests.colQuality"),
-      cell: ({ row }) => row.original.quality || "-",
+      cell: ({ row }) => {
+        const val = row.original.quality;
+        if (!val) return "-";
+        const badgeColor =
+          val === "Loại 1" ? "bg-emerald-100 text-emerald-800 border-emerald-200" :
+          val === "Loại 2" ? "bg-amber-100 text-amber-800 border-amber-200" :
+          "bg-slate-100 text-slate-700 border-slate-200";
+        return <span className={`px-2 py-0.5 rounded text-xs font-semibold border ${badgeColor}`}>{val}</span>;
+      },
     },
     {
       accessorKey: "season",
@@ -281,16 +324,32 @@ export default function HarvestsPage() {
             </div>
           </div>
 
-          {/* Season & Quality Breakdowns */}
-          <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
+          {/* Daily, Season & Quality Breakdowns */}
+          <div className="grid gap-6 grid-cols-1 md:grid-cols-3">
+            <div className="rounded-xl border bg-card p-5">
+              <h4 className="font-semibold text-sm mb-3">Sản lượng thu hoạch theo ngày</h4>
+              {dailyHarvestList.length > 0 ? (
+                <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                  {dailyHarvestList.map((d, idx) => (
+                    <div key={idx} className="flex justify-between items-center text-sm p-2 rounded bg-muted/40">
+                      <span className="font-medium">{d.date}</span>
+                      <span className="font-mono font-bold text-blue-700">{d.quantity_kg} kg <span className="text-xs text-muted-foreground">({d.records} lượt)</span></span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">Chưa có dữ liệu thu hoạch theo ngày.</p>
+              )}
+            </div>
+
             <div className="rounded-xl border bg-card p-5">
               <h4 className="font-semibold text-sm mb-3">{t("harvests.yieldBySeason")}</h4>
               {stats.by_season.length > 0 ? (
-                <div className="space-y-2">
+                <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
                   {stats.by_season.map((s, idx) => (
                     <div key={idx} className="flex justify-between items-center text-sm p-2 rounded bg-muted/40">
                       <span className="font-medium">{s.season || t("harvests.unassigned")}</span>
-                      <span className="font-mono font-bold text-green-700">{s.quantity_kg} kg <span className="text-xs text-muted-foreground">({s.records} {t("harvests.harvestRecordsCount").replace("{count}", "").trim()})</span></span>
+                      <span className="font-mono font-bold text-green-700">{s.quantity_kg} kg <span className="text-xs text-muted-foreground">({s.records} lượt)</span></span>
                     </div>
                   ))}
                 </div>
@@ -302,11 +361,11 @@ export default function HarvestsPage() {
             <div className="rounded-xl border bg-card p-5">
               <h4 className="font-semibold text-sm mb-3">{t("harvests.yieldByQuality")}</h4>
               {stats.by_quality.length > 0 ? (
-                <div className="space-y-2">
+                <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
                   {stats.by_quality.map((q, idx) => (
                     <div key={idx} className="flex justify-between items-center text-sm p-2 rounded bg-muted/40">
                       <span className="font-medium">{q.quality || t("harvests.unassigned")}</span>
-                      <span className="font-mono font-bold text-green-700">{q.quantity_kg} kg <span className="text-xs text-muted-foreground">({q.records} {t("harvests.harvestRecordsCount").replace("{count}", "").trim()})</span></span>
+                      <span className="font-mono font-bold text-amber-700">{q.quantity_kg} kg <span className="text-xs text-muted-foreground">({q.records} lượt)</span></span>
                     </div>
                   ))}
                 </div>
@@ -450,12 +509,17 @@ export default function HarvestsPage() {
 
             <div className="space-y-2">
               <Label htmlFor="edit_quality">{t("harvestForm.qualityLabel")}</Label>
-              <Input
+              <select
                 id="edit_quality"
-                placeholder={t("harvestForm.qualityPlaceholder")}
+                className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                 value={editQuality}
                 onChange={(e) => setEditQuality(e.target.value)}
-              />
+              >
+                <option value="">Chọn loại chất lượng</option>
+                <option value="Loại 1">Loại 1 (Hảo hạng)</option>
+                <option value="Loại 2">Loại 2 (Tiêu chuẩn)</option>
+                <option value="Loại 3">Loại 3 / Khác</option>
+              </select>
             </div>
 
             <div className="space-y-2">

@@ -44,9 +44,10 @@ export interface Zone {
   id: string;
   garden_id: string;
   name: string;
-  grid_position: string | null;
-  created_at: string;
-  updated_at: string;
+  grid_position: string | number | null;
+  boundary?: GardenBoundary | null;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface ZoneAssignment {
@@ -65,6 +66,8 @@ export interface Plant {
   grid_x: number | null;
   grid_y: number | null;
   status: PlantStatus;
+  latitude?: number | null;
+  longitude?: number | null;
   planted_at: string | null;
   created_at: string;
   updated_at: string;
@@ -295,6 +298,13 @@ export interface InventoryTransaction {
   quantity: number;
   note: string | null;
   created_by: string | null;
+  created_by_name?: string | null;
+  task_id?: string | null;
+  task_title?: string | null;
+  recipient_id?: string | null;
+  recipient_name?: string | null;
+  approved_by_id?: string | null;
+  approved_by_name?: string | null;
   created_at: string;
 }
 

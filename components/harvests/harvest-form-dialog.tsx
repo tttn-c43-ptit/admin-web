@@ -179,7 +179,7 @@ export function HarvestFormDialog({
                   <FormItem>
                     <FormLabel>{t("harvestForm.qualityLabel")}</FormLabel>
                     <FormControl>
-                      <Input placeholder={t("harvestForm.qualityPlaceholder")} {...field} />
+                      <Input placeholder="VD: Loại 1, Loại 2, Grade A..." {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

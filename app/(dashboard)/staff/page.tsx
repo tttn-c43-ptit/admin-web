@@ -16,7 +16,7 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Plus, X, Pencil, UserX, UserCheck, ShieldCheck, ShieldAlert, KeyRound } from "lucide-react";
+import { Plus, X, Pencil, UserX, UserCheck, ShieldCheck, ShieldAlert, KeyRound, Sparkles, Eye, EyeOff, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "@/components/i18n-provider";
 
@@ -75,8 +75,19 @@ export default function StaffPage() {
   // Edit Staff Dialog State
   const [editingStaff, setEditingStaff] = useState<StaffUser | null>(null);
 
-  // Reset Password Dialog State
+  // Reset Password Dialog State & UX
   const [resettingStaff, setResettingStaff] = useState<StaffUser | null>(null);
+  const [showResetPasswordText, setShowResetPasswordText] = useState(false);
+
+  const generateRandomPassword = () => {
+    const chars = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789!@#$%";
+    let res = "";
+    for (let i = 0; i < 10; i++) {
+      res += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    resetPasswordForm.setValue("password", res, { shouldValidate: true });
+    setShowResetPasswordText(true);
+  };
 
   const form = useForm<StaffFormValues>({
     resolver: zodResolver(staffSchema),
@@ -174,23 +185,35 @@ export default function StaffPage() {
   // Open Reset Password Dialog
   const handleOpenResetPassword = (staff: StaffUser) => {
     setResettingStaff(staff);
+    setShowResetPasswordText(false);
     resetPasswordForm.reset({ password: "" });
   };
 
-  // Submit Reset Password (PATCH /api/staff/{id})
+  // Submit Reset Password (POST /api/staff/{id}/reset-password)
   const onResetPasswordSubmit = async (values: ResetPasswordFormValues) => {
     if (!resettingStaff) return;
     try {
-      await api.patch(`api/staff/${resettingStaff.id}`, {
+      await api.post(`api/staff/${resettingStaff.id}/reset-password`, {
         json: {
-          password: values.password,
+          new_password: values.password,
         },
       });
       toast.success(`${t("staff.resetSuccess")} (${resettingStaff.full_name})`);
       setResettingStaff(null);
       resetPasswordForm.reset();
-    } catch (err) {
-      toast.error(t("staff.resetError"));
+    } catch (err: unknown) {
+      let msg = t("staff.resetError");
+      if (err && typeof err === "object" && "response" in err) {
+        try {
+          const res = await (err as any).response.json();
+          if (res?.detail) {
+            msg = typeof res.detail === "string" ? res.detail : JSON.stringify(res.detail);
+          }
+        } catch {}
+      } else if (err instanceof Error) {
+        msg = err.message;
+      }
+      toast.error(msg);
     }
   };
 
@@ -470,13 +493,37 @@ export default function StaffPage() {
             </p>
 
             <div className="space-y-2">
-              <Label htmlFor="reset_password">{t("auth.passwordLabel")}</Label>
-              <Input
-                id="reset_password"
-                type="password"
-                placeholder={t("auth.passwordPlaceholder")}
-                {...resetPasswordForm.register("password")}
-              />
+              <div className="flex items-center justify-between">
+                <Label htmlFor="reset_password">{t("auth.passwordLabel")}</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 text-xs text-amber-700 hover:text-amber-800 hover:bg-amber-50 gap-1 font-semibold"
+                  onClick={generateRandomPassword}
+                >
+                  <Sparkles className="h-3 w-3" />
+                  Tạo ngẫu nhiên
+                </Button>
+              </div>
+              <div className="relative">
+                <Input
+                  id="reset_password"
+                  type={showResetPasswordText ? "text" : "password"}
+                  placeholder={t("auth.passwordPlaceholder")}
+                  className="pr-10"
+                  {...resetPasswordForm.register("password")}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0 h-full px-3 text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowResetPasswordText(!showResetPasswordText)}
+                >
+                  {showResetPasswordText ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
               {resetPasswordForm.formState.errors.password && (
                 <p className="text-xs text-destructive">{t(resetPasswordForm.formState.errors.password.message as any)}</p>
               )}

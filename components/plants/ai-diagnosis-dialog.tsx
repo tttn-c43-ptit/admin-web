@@ -72,14 +72,27 @@ export function AIDiagnosisDialog({
     ? (result.diagnosis.confidence * 100).toFixed(1)
     : null;
 
+  // Format display model name
+  const formatModelName = (name?: string) => {
+    if (!name) return "Durian Classifier (HF)";
+    if (name.includes("+")) return "Durian Hybrid (Classifier + VLM)";
+    if (name.includes("durian")) return "Durian Classifier";
+    return name;
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[540px] max-h-[90vh] overflow-y-auto">
         <DialogHeader className="border-b pb-3">
-          <DialogTitle className="flex items-center gap-2 text-emerald-800 text-lg">
-            <Sparkles className="h-5 w-5 text-emerald-600 animate-pulse" />
-            AI Chẩn Đoán Bệnh Lá Cây (Vision Model)
-          </DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="flex items-center gap-2 text-emerald-800 text-lg">
+              <Sparkles className="h-5 w-5 text-emerald-600 animate-pulse" />
+              AI Chẩn Đoán Bệnh Sầu Riêng (Durian AI)
+            </DialogTitle>
+            <Badge className="bg-emerald-700 text-white font-normal text-xs px-2 py-0.5">
+              Sầu Riêng Specialist
+            </Badge>
+          </div>
         </DialogHeader>
 
         <div className="space-y-5 pt-2">
@@ -87,7 +100,7 @@ export function AIDiagnosisDialog({
           <div className="relative rounded-xl overflow-hidden border bg-emerald-950/5 aspect-video flex items-center justify-center group shadow-inner">
             <img
               src={formatImageUrl(imageUrl)}
-              alt="Lá cây chẩn đoán"
+              alt="Lá cây sầu riêng chẩn đoán"
               className="max-h-full w-auto object-contain transition-transform duration-300 group-hover:scale-105"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
@@ -103,10 +116,10 @@ export function AIDiagnosisDialog({
                   <Loader2 className="h-10 w-10 animate-spin text-emerald-600 relative z-10" />
                 </div>
                 <p className="font-semibold text-emerald-800 animate-pulse text-sm">
-                  Đang phân tích đặc trưng hình ảnh lá cây...
+                  Đang phân tích đặc trưng lá sầu riêng...
                 </p>
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <Cpu className="h-3.5 w-3.5" /> Model: ResNet-50 / Hugging Face Local
+                  <Cpu className="h-3.5 w-3.5" /> Model: Durian Classifier + VLM Hybrid
                 </div>
               </div>
             )}
@@ -137,21 +150,21 @@ export function AIDiagnosisDialog({
                 <div className="p-4 border-b border-emerald-100 bg-emerald-900/5 flex items-start justify-between gap-3">
                   <div>
                     <span className="text-xs font-semibold text-emerald-700 uppercase tracking-wider block mb-1">
-                      Loại bệnh phát hiện (Detected Condition)
+                      Kết quả nhận diện bệnh lá Sầu Riêng
                     </span>
                     <h3 className="text-xl font-extrabold text-emerald-950 tracking-tight">
-                      {result.diagnosis.disease || "Không phát hiện triệu chứng bệnh (Khỏe mạnh)"}
+                      {result.diagnosis.disease || "Chưa xác định bệnh (Nằm ngoài danh mục sầu riêng)"}
                     </h3>
                   </div>
                   <Badge variant="outline" className="bg-emerald-100/80 text-emerald-800 border-emerald-300 gap-1 text-xs shrink-0 font-mono">
                     <Cpu className="h-3 w-3" />
-                    {result.diagnosis.model_name || "ResNet-50 Local"}
+                    {formatModelName(result.diagnosis.model_name || undefined)}
                   </Badge>
                 </div>
 
                 <div className="p-4 space-y-4">
                   {/* Độ tin cậy (Confidence Score %) */}
-                  {confidencePercent !== null && (
+                  {confidencePercent !== null ? (
                     <div className="space-y-2 bg-white/80 p-3 rounded-xl border border-emerald-100">
                       <div className="flex justify-between items-center text-sm">
                         <span className="text-muted-foreground font-medium flex items-center gap-1.5">
@@ -169,6 +182,10 @@ export function AIDiagnosisDialog({
                         />
                       </div>
                     </div>
+                  ) : (
+                    <div className="text-xs text-amber-800 bg-amber-50 p-2.5 rounded-lg border border-amber-200">
+                      Mức độ tin cậy dưới ngưỡng tối thiểu (Chưa đủ căn cứ xác định mã bệnh sầu riêng).
+                    </div>
                   )}
 
                   {/* Gợi ý xử lý / Đề xuất chăm sóc & Thuốc */}
@@ -176,7 +193,7 @@ export function AIDiagnosisDialog({
                     <div className="space-y-1.5 bg-emerald-50/60 p-3.5 rounded-xl border border-emerald-200/60">
                       <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-800 flex items-center gap-1.5">
                         <Stethoscope className="h-4 w-4 text-emerald-700" />
-                        Gợi ý xử lý & Biện pháp chăm sóc
+                        Gợi ý phác đồ điều trị & Biện pháp chăm sóc Sầu Riêng
                       </h4>
                       <p className="text-sm text-emerald-950 leading-relaxed font-medium">
                         {result.diagnosis.suggestion}
