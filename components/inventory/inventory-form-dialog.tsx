@@ -43,7 +43,7 @@ const invTypeKeyMap: Record<string, TranslationKey> = {
 };
 
 const formSchema = z.object({
-  name: z.string().min(1, "Name is required").max(100),
+  name: z.string().min(1, "Tên vật tư không được để trống").max(100),
   type: z.enum(["FERTILIZER", "PESTICIDE", "TOOL", "OTHER"]),
   unit: z.string().max(20).optional(),
   min_quantity: z.number().min(0),
@@ -114,14 +114,14 @@ export function InventoryFormDialog({
 
       if (itemToEdit) {
         await api.patch(`api/inventory/${itemToEdit.id}`, { json: payload });
-        toast.success("Item updated successfully");
+        toast.success("Cập nhật vật tư thành công");
       } else {
         await api.post(`api/gardens/${gardenId}/inventory`, { json: payload });
-        toast.success("Item created successfully");
+        toast.success("Thêm vật tư thành công");
       }
       onSuccess();
     } catch (err) {
-      toast.error(itemToEdit ? "Failed to update item" : "Failed to create item");
+      toast.error(itemToEdit ? "Không thể cập nhật vật tư" : "Không thể thêm vật tư mới");
     } finally {
       setIsSubmitting(false);
     }

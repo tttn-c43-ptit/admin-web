@@ -24,16 +24,20 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Award } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { PaginatedResponse, Plant, Zone } from "@/types";
 import { queryKeys } from "@/lib/query-keys";
 import { useTranslation } from "@/components/i18n-provider";
 
+import { QualityManagementDialog } from "@/components/harvests/quality-management-dialog";
+import { getQualityGrades, QualityGrade } from "@/lib/quality-definitions-store";
+import { useEffect } from "react";
+
 const formSchema = z.object({
   plant_id: z.string().min(1, "Plant is required"),
   quantity_kg: z.number().min(0.01, "Quantity must be greater than 0"),
-  quality: z.string().max(20).optional(),
+  quality: z.string().max(40).optional(),
   season: z.string().max(30).optional(),
   harvested_at: z.string().min(1, "Date is required"),
 });
@@ -55,6 +59,18 @@ export function HarvestFormDialog({
 }: HarvestFormDialogProps) {
   const { t } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isManageQualityOpen, setIsManageQualityOpen] = useState(false);
+  const [qualityGrades, setQualityGrades] = useState<QualityGrade[]>([]);
+
+  useEffect(() => {
+    if (open) {
+      setQualityGrades(getQualityGrades(gardenId));
+    }
+  }, [open, gardenId]);
+
+  const refreshQualityGrades = () => {
+    setQualityGrades(getQualityGrades(gardenId));
+  };
 
   const { data: plantsData } = useQuery({
     queryKey: ["plants", gardenId, "list-all"],
@@ -97,11 +113,11 @@ export function HarvestFormDialog({
           harvested_at: values.harvested_at,
         },
       });
-      toast.success("Harvest recorded successfully");
+      toast.success("Đã ghi nhận thu hoạch thành công");
       form.reset();
       onSuccess(values.plant_id);
     } catch (err) {
-      toast.error("Failed to record harvest");
+      toast.error("Không thể ghi nhận thu hoạch");
     } finally {
       setIsSubmitting(false);
     }
@@ -177,9 +193,42 @@ export function HarvestFormDialog({
                 name="quality"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("harvestForm.qualityLabel")}</FormLabel>
+                    <div className="flex items-center justify-between gap-1 mb-1">
+                      <FormLabel className="text-xs font-semibold text-foreground truncate flex-1 min-w-0" title={t("harvestForm.qualityLabel")}>
+                        {t("harvestForm.qualityLabel")}
+                      </FormLabel>
+                      <button
+                        type="button"
+                        onClick={() => setIsManageQualityOpen(true)}
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded transition-colors shrink-0 whitespace-nowrap"
+                      >
+                        <Award className="h-3 w-3" />
+                        <span>+ Quản lý</span>
+                      </button>
+                    </div>
                     <FormControl>
-                      <Input placeholder="VD: Loại 1, Loại 2, Grade A..." {...field} />
+                      <select
+                        className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                        value={field.value || ""}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === "__MANAGE_NEW__") {
+                            setIsManageQualityOpen(true);
+                          } else {
+                            field.onChange(val);
+                          }
+                        }}
+                      >
+                        <option value="">-- Chọn chất lượng --</option>
+                        {qualityGrades.map((g) => (
+                          <option key={g.id} value={g.name}>
+                            {g.name}
+                          </option>
+                        ))}
+                        <option value="__MANAGE_NEW__" className="font-semibold text-emerald-700">
+                          + Thêm / Quản lý phân loại...
+                        </option>
+                      </select>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -231,6 +280,12 @@ export function HarvestFormDialog({
             </div>
           </form>
         </Form>
+        <QualityManagementDialog
+          open={isManageQualityOpen}
+          onOpenChange={setIsManageQualityOpen}
+          gardenId={gardenId}
+          onUpdated={refreshQualityGrades}
+        />
       </DialogContent>
     </Dialog>
   );

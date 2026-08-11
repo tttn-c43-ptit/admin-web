@@ -81,10 +81,10 @@ export default function InventoryPage() {
     if (!confirm(t("inventory.deleteConfirm"))) return;
     try {
       await api.delete(`api/inventory/${id}`);
-      toast.success("Item deleted successfully");
+      toast.success("Đã xóa vật tư thành công");
       refetch();
     } catch (err) {
-      toast.error("Failed to delete item");
+      toast.error("Không thể xóa vật tư");
     }
   };
 
@@ -132,7 +132,7 @@ export default function InventoryPage() {
       header: t("inventory.colExpiry"),
       cell: ({ row }) => {
         const d = row.original.expiry_date;
-        return d ? format(new Date(d), "MMM d, yyyy") : "-";
+        return d ? format(new Date(d), "dd/MM/yyyy") : "-";
       },
     },
     {

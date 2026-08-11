@@ -38,25 +38,33 @@ export function AIDiagnosisDialog({
     setIsLoading(true);
     setResult(null);
     setErrorStatus(null);
-    try {
-      const targetUrl = imageUrl.replace("localhost:9000", "minio:9000");
 
+    try {
       const res = await api.post("api/ai/diagnose", {
         json: {
           plant_log_id: plantLogId,
-          image_url: targetUrl,
+          image_url: imageUrl,
         },
+        throwHttpErrors: false,
       });
-      const data = await res.json<DiagnoseResponse>();
-      setResult(data);
-    } catch (error: unknown) {
-      const err = error as { response?: { status?: number } };
-      if (err?.response?.status === 429) {
+
+      if (res.ok) {
+        const data = await res.json<DiagnoseResponse>();
+        setResult(data);
+        return;
+      }
+
+      const errJson = (await res.json().catch(() => ({}))) as Record<string, any>;
+      const detail: string = errJson?.detail || "";
+
+      if (res.status === 429) {
         setErrorStatus(429);
         toast.error("Hệ thống AI đang quá tải. Vui lòng thử lại sau giây lát.");
       } else {
-        toast.error("Không thể chẩn đoán ảnh bằng AI. Vui lòng kiểm tra lại đường dẫn ảnh.");
+        toast.error(detail || "Không thể chẩn đoán ảnh bằng AI.");
       }
+    } catch {
+      toast.error("Không thể kết nối đến máy chủ AI.");
     } finally {
       setIsLoading(false);
     }
@@ -74,9 +82,10 @@ export function AIDiagnosisDialog({
 
   // Format display model name
   const formatModelName = (name?: string) => {
-    if (!name) return "Durian Classifier (HF)";
+    if (!name) return "Durian Vision AI";
     if (name.includes("+")) return "Durian Hybrid (Classifier + VLM)";
-    if (name.includes("durian")) return "Durian Classifier";
+    if (name.includes("resnet") || name.includes("mesabo")) return "ResNet-50 (Agri-Plant)";
+    if (name.includes("fake")) return "Demo Vision Provider";
     return name;
   };
 

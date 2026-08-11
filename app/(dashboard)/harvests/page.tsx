@@ -21,9 +21,11 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
-import { Plus, Tractor, Loader2, Pencil, Trash2 } from "lucide-react";
+import { Plus, Tractor, Loader2, Pencil, Trash2, Award } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { HarvestFormDialog } from "@/components/harvests/harvest-form-dialog";
+import { QualityManagementDialog } from "@/components/harvests/quality-management-dialog";
+import { getQualityGrades, QualityGrade } from "@/lib/quality-definitions-store";
 import { ResponsiveContainer, Tooltip as RechartsTooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 import { toast } from "sonner";
 import {
@@ -46,6 +48,12 @@ export default function HarvestsPage() {
   const pageSize = 10;
   
   const [formOpen, setFormOpen] = useState(false);
+  const [qualityManagerOpen, setQualityManagerOpen] = useState(false);
+  const [qualityGrades, setQualityGrades] = useState<QualityGrade[]>([]);
+
+  useEffect(() => {
+    setQualityGrades(getQualityGrades(gardenId));
+  }, [gardenId, qualityManagerOpen]);
 
   // Edit Harvest State
   const [editingHarvest, setEditingHarvest] = useState<Harvest | null>(null);
@@ -274,8 +282,16 @@ export default function HarvestsPage() {
           <h2 className="text-3xl font-bold tracking-tight">{t("harvests.title")}</h2>
           <p className="text-muted-foreground mt-1">{t("harvests.subtitle")}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <GardenSelector value={gardenId} onChange={handleGardenChange} />
+          <Button
+            variant="outline"
+            className="border-emerald-200 text-emerald-800 hover:bg-emerald-50"
+            onClick={() => setQualityManagerOpen(true)}
+          >
+            <Award className="mr-2 h-4 w-4 text-emerald-600" />
+            {t("quality.manageButton") || "Quản lý chất lượng"}
+          </Button>
           <Button onClick={() => setFormOpen(true)} disabled={!gardenId}>
             <Plus className="mr-2 h-4 w-4" /> {t("harvests.addHarvest")}
           </Button>
@@ -508,17 +524,31 @@ export default function HarvestsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit_quality">{t("harvestForm.qualityLabel")}</Label>
+              <div className="flex items-center justify-between gap-1 mb-1">
+                <Label htmlFor="edit_quality" className="text-xs font-semibold text-foreground truncate flex-1 min-w-0">
+                  {t("harvestForm.qualityLabel")}
+                </Label>
+                <button
+                  type="button"
+                  onClick={() => setQualityManagerOpen(true)}
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded transition-colors shrink-0 whitespace-nowrap"
+                >
+                  <Award className="h-3 w-3" />
+                  <span>+ Quản lý</span>
+                </button>
+              </div>
               <select
                 id="edit_quality"
                 className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                 value={editQuality}
                 onChange={(e) => setEditQuality(e.target.value)}
               >
-                <option value="">Chọn loại chất lượng</option>
-                <option value="Loại 1">Loại 1 (Hảo hạng)</option>
-                <option value="Loại 2">Loại 2 (Tiêu chuẩn)</option>
-                <option value="Loại 3">Loại 3 / Khác</option>
+                <option value="">-- Chọn chất lượng --</option>
+                {qualityGrades.map((g) => (
+                  <option key={g.id} value={g.name}>
+                    {g.name}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -543,6 +573,13 @@ export default function HarvestsPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Quality Management Dialog */}
+      <QualityManagementDialog
+        open={qualityManagerOpen}
+        onOpenChange={setQualityManagerOpen}
+        gardenId={gardenId}
+      />
     </div>
   );
 }
