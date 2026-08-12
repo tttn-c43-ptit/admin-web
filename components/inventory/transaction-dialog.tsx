@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useState, useEffect, useRef } from "react";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useQuery } from "@tanstack/react-query";
@@ -34,7 +34,17 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Loader2, ClipboardList, UserCheck, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
+import {
+  Loader2,
+  ClipboardList,
+  UserCheck,
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  Search,
+  X,
+  ChevronDown,
+  Check,
+} from "lucide-react";
 import { useTranslation } from "@/components/i18n-provider";
 
 // ── Localization maps ────────────────────────────────────────────────────────
@@ -71,14 +81,200 @@ const TASK_STATUS_COLOR: Record<TaskStatus, string> = {
   CANCELLED: "bg-gray-100 text-gray-500 border-gray-200",
 };
 
-function formatTaskLabel(task: TaskOut): string {
-  const icon = TASK_TYPE_ICON[task.type] ?? "📋";
-  const typeName = TASK_TYPE_VI[task.type] ?? task.type;
-  const titlePart = task.title ? `: "${task.title}"` : "";
-  const datePart = task.due_date
-    ? ` — HH: ${new Date(task.due_date).toLocaleDateString("vi-VN")}`
-    : "";
-  return `${icon} ${typeName}${titlePart}${datePart}`;
+// ── Searchable Combobox ───────────────────────────────────────────────────────
+
+interface ComboboxOption {
+  value: string;
+  label: string;
+  sublabel?: string;
+  badge?: { text: string; className: string };
+  icon?: string;
+  dimmed?: boolean;
+  groupHeader?: string;
+}
+
+interface SearchableComboboxProps {
+  value: string;
+  onChange: (value: string) => void;
+  options: ComboboxOption[];
+  placeholder?: string;
+  searchPlaceholder?: string;
+  emptyText?: string;
+  disabled?: boolean;
+  renderTrigger?: (selected: ComboboxOption | undefined) => React.ReactNode;
+}
+
+function SearchableCombobox({
+  value,
+  onChange,
+  options,
+  placeholder = "— Không chọn —",
+  searchPlaceholder = "Tìm kiếm...",
+  emptyText = "Không tìm thấy kết quả",
+  disabled,
+  renderTrigger,
+}: SearchableComboboxProps) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const selected = options.find((o) => o.value === value);
+
+  // Close on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+        setSearch("");
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  // Focus input when opening
+  useEffect(() => {
+    if (open) {
+      setTimeout(() => inputRef.current?.focus(), 50);
+    }
+  }, [open]);
+
+  const normalizeStr = (s: string) =>
+    s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+  const filtered = search.trim()
+    ? options.filter(
+        (o) =>
+          normalizeStr(o.label).includes(normalizeStr(search)) ||
+          (o.sublabel && normalizeStr(o.sublabel).includes(normalizeStr(search))) ||
+          (o.badge && normalizeStr(o.badge.text).includes(normalizeStr(search)))
+      )
+    : options;
+
+  const handleSelect = (optValue: string) => {
+    onChange(optValue);
+    setOpen(false);
+    setSearch("");
+  };
+
+  return (
+    <div ref={containerRef} className="relative w-full">
+      {/* Trigger */}
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setOpen((prev) => !prev)}
+        className={`flex w-full items-center justify-between rounded-md border border-emerald-200 bg-background px-3 py-2 text-sm shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 min-h-10 ${
+          open ? "ring-2 ring-emerald-400 ring-offset-1" : "hover:border-emerald-400"
+        }`}
+      >
+        <span className="flex-1 text-left truncate">
+          {renderTrigger ? (
+            renderTrigger(selected)
+          ) : selected && selected.value !== "none" ? (
+            <span className="flex items-center gap-2">
+              {selected.icon && <span>{selected.icon}</span>}
+              <span className="font-medium">{selected.label}</span>
+              {selected.badge && (
+                <Badge variant="outline" className={`text-xs px-1.5 py-0 ${selected.badge.className}`}>
+                  {selected.badge.text}
+                </Badge>
+              )}
+            </span>
+          ) : (
+            <span className="text-muted-foreground">{placeholder}</span>
+          )}
+        </span>
+        <ChevronDown
+          className={`h-4 w-4 text-muted-foreground shrink-0 ml-2 transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {/* Dropdown */}
+      {open && (
+        <div className="absolute left-0 right-0 top-full mt-1 z-50 rounded-lg border border-slate-200 bg-white shadow-xl overflow-hidden">
+          {/* Search input */}
+          <div className="flex items-center gap-2 px-3 py-2 border-b border-slate-100 bg-slate-50/80">
+            <Search className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+            <input
+              ref={inputRef}
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={searchPlaceholder}
+              className="flex-1 bg-transparent text-sm outline-none placeholder:text-slate-400 text-slate-700"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Options list */}
+          <div className="max-h-60 overflow-y-auto py-1">
+            {filtered.length === 0 ? (
+              <div className="py-6 text-center text-sm text-muted-foreground">{emptyText}</div>
+            ) : (
+              filtered.map((opt, idx) => {
+                const isSelected = opt.value === value;
+                const prevOpt = filtered[idx - 1];
+                const showGroup =
+                  opt.groupHeader && opt.groupHeader !== prevOpt?.groupHeader;
+
+                return (
+                  <div key={opt.value}>
+                    {showGroup && (
+                      <div className="px-3 pt-2 pb-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                        {opt.groupHeader}
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleSelect(opt.value)}
+                      className={`flex w-full items-center gap-2 px-3 py-2 text-sm text-left transition-colors ${
+                        isSelected
+                          ? "bg-emerald-50 text-emerald-900"
+                          : opt.dimmed
+                          ? "opacity-60 hover:bg-slate-50"
+                          : "hover:bg-slate-50"
+                      }`}
+                    >
+                      {opt.icon && <span className="shrink-0">{opt.icon}</span>}
+                      <span className="flex-1 min-w-0">
+                        <span className="block font-medium truncate">{opt.label}</span>
+                        {opt.sublabel && (
+                          <span className="block text-xs text-muted-foreground truncate">
+                            {opt.sublabel}
+                          </span>
+                        )}
+                      </span>
+                      {opt.badge && (
+                        <Badge
+                          variant="outline"
+                          className={`text-xs px-1.5 py-0 shrink-0 ${opt.badge.className}`}
+                        >
+                          {opt.badge.text}
+                        </Badge>
+                      )}
+                      {isSelected && (
+                        <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                      )}
+                    </button>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ── Form schema ───────────────────────────────────────────────────────────────
@@ -127,11 +323,12 @@ export function TransactionDialog({
   });
 
   const tasks = tasksData?.items || [];
-  // Only show non-done/cancelled tasks for linking (PENDING or IN_PROGRESS)
   const activeTasks = tasks.filter(
     (t) => t.status === "PENDING" || t.status === "IN_PROGRESS"
   );
-  const allTasks = tasks; // show all but visually distinct
+  const doneTasks = tasks.filter(
+    (t) => t.status === "DONE" || t.status === "CANCELLED"
+  );
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -197,9 +394,62 @@ export function TransactionDialog({
 
   const currentDirection = form.watch("direction");
   const selectedTaskId = form.watch("task_id");
-  const selectedTask = allTasks.find((t) => t.id === selectedTaskId);
+  const selectedTask = tasks.find((t) => t.id === selectedTaskId);
   const selectedRecipientId = form.watch("recipient_id");
   const selectedRecipient = staffList.find((s) => s.id === selectedRecipientId);
+
+  // Build task combobox options
+  const taskOptions: ComboboxOption[] = [
+    {
+      value: "none",
+      label: "Không gắn công việc (xuất lẻ)",
+      groupHeader: "",
+    },
+    ...activeTasks.map((task) => ({
+      value: task.id,
+      label: `${TASK_TYPE_VI[task.type]}${task.title ? `: ${task.title}` : ""}`,
+      sublabel: task.due_date
+        ? `Hạn: ${new Date(task.due_date).toLocaleDateString("vi-VN")}`
+        : undefined,
+      icon: TASK_TYPE_ICON[task.type],
+      badge: {
+        text: TASK_STATUS_VI[task.status],
+        className: TASK_STATUS_COLOR[task.status],
+      },
+      groupHeader: "Đang hoạt động",
+    })),
+    ...doneTasks.map((task) => ({
+      value: task.id,
+      label: `${TASK_TYPE_VI[task.type]}${task.title ? `: ${task.title}` : ""}`,
+      sublabel: task.due_date
+        ? `Hạn: ${new Date(task.due_date).toLocaleDateString("vi-VN")}`
+        : undefined,
+      icon: TASK_TYPE_ICON[task.type],
+      badge: {
+        text: TASK_STATUS_VI[task.status],
+        className: TASK_STATUS_COLOR[task.status],
+      },
+      groupHeader: "Đã kết thúc",
+      dimmed: true,
+    })),
+  ];
+
+  // Build staff combobox options
+  const staffOptions: ComboboxOption[] = [
+    { value: "none", label: "Không chọn" },
+    ...staffList.map((user) => ({
+      value: user.id,
+      label: user.full_name,
+      sublabel: user.email || undefined,
+      icon: "👤",
+      badge: {
+        text: user.role === "OWNER" ? "Chủ vườn" : "Nhân viên",
+        className: user.role === "OWNER"
+          ? "bg-purple-100 text-purple-800 border-purple-200"
+          : "bg-slate-100 text-slate-700 border-slate-200",
+      },
+    })),
+  ];
 
   return (
     <Dialog open={!!item} onOpenChange={onOpenChange}>
@@ -301,149 +551,87 @@ export function TransactionDialog({
               />
             </div>
 
-            {/* Công việc liên quan */}
-            <FormField
-              control={form.control}
-              name="task_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-1.5 text-emerald-900">
-                    <ClipboardList className="h-4 w-4 text-emerald-600" />
-                    Gắn vào công việc (Tùy chọn)
-                  </FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger className="border-emerald-200 h-auto min-h-10">
-                        {selectedTask ? (
-                          <div className="flex items-center gap-2 py-0.5">
-                            <span>{TASK_TYPE_ICON[selectedTask.type]}</span>
-                            <span className="font-medium text-sm">
-                              {TASK_TYPE_VI[selectedTask.type]}
-                              {selectedTask.title ? `: ${selectedTask.title}` : ""}
-                            </span>
+            {/* Công việc liên quan — Searchable */}
+            <FormItem>
+              <FormLabel className="flex items-center gap-1.5 text-emerald-900">
+                <ClipboardList className="h-4 w-4 text-emerald-600" />
+                Gắn vào công việc (Tùy chọn)
+              </FormLabel>
+              <Controller
+                control={form.control}
+                name="task_id"
+                render={({ field }) => (
+                  <SearchableCombobox
+                    value={field.value || "none"}
+                    onChange={field.onChange}
+                    options={taskOptions}
+                    placeholder="— Không gắn công việc (xuất lẻ) —"
+                    searchPlaceholder="Tìm theo tên công việc, loại, hạn..."
+                    emptyText="Không tìm thấy công việc phù hợp"
+                    renderTrigger={(selected) =>
+                      selected && selected.value !== "none" ? (
+                        <span className="flex items-center gap-2 py-0.5">
+                          <span>{selected.icon}</span>
+                          <span className="font-medium text-sm">{selected.label}</span>
+                          {selected.badge && (
                             <Badge
                               variant="outline"
-                              className={`text-xs px-1.5 py-0 ml-1 ${TASK_STATUS_COLOR[selectedTask.status]}`}
+                              className={`text-xs px-1.5 py-0 ml-1 ${selected.badge.className}`}
                             >
-                              {TASK_STATUS_VI[selectedTask.status]}
+                              {selected.badge.text}
                             </Badge>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">
-                            — Không gắn công việc (xuất lẻ) —
-                          </span>
-                        )}
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="none">
-                        <span className="text-muted-foreground">— Không gắn công việc (xuất lẻ) —</span>
-                      </SelectItem>
-                      {/* Active tasks first */}
-                      {activeTasks.length > 0 && (
-                        <div className="px-2 py-1 text-xs font-semibold text-emerald-700 uppercase tracking-wide">
-                          Đang hoạt động
-                        </div>
-                      )}
-                      {activeTasks.map((task) => (
-                        <SelectItem key={task.id} value={task.id}>
-                          <div className="flex items-center gap-2">
-                            <span>{TASK_TYPE_ICON[task.type]}</span>
-                            <span className="font-medium">
-                              {TASK_TYPE_VI[task.type]}
-                              {task.title ? `: ${task.title}` : ""}
-                            </span>
-                            {task.due_date && (
-                              <span className="text-xs text-muted-foreground ml-1">
-                                HH: {new Date(task.due_date).toLocaleDateString("vi-VN")}
-                              </span>
-                            )}
-                            <Badge
-                              variant="outline"
-                              className={`text-xs px-1.5 py-0 ml-auto ${TASK_STATUS_COLOR[task.status]}`}
-                            >
-                              {TASK_STATUS_VI[task.status]}
-                            </Badge>
-                          </div>
-                        </SelectItem>
-                      ))}
-                      {/* Completed/cancelled tasks */}
-                      {allTasks.filter(t => t.status === "DONE" || t.status === "CANCELLED").length > 0 && (
-                        <div className="px-2 py-1 text-xs font-semibold text-gray-400 uppercase tracking-wide mt-1">
-                          Đã kết thúc
-                        </div>
-                      )}
-                      {allTasks
-                        .filter((t) => t.status === "DONE" || t.status === "CANCELLED")
-                        .map((task) => (
-                          <SelectItem key={task.id} value={task.id} className="opacity-60">
-                            <div className="flex items-center gap-2">
-                              <span>{TASK_TYPE_ICON[task.type]}</span>
-                              <span>
-                                {TASK_TYPE_VI[task.type]}
-                                {task.title ? `: ${task.title}` : ""}
-                              </span>
-                              <Badge
-                                variant="outline"
-                                className={`text-xs px-1.5 py-0 ml-auto ${TASK_STATUS_COLOR[task.status]}`}
-                              >
-                                {TASK_STATUS_VI[task.status]}
-                              </Badge>
-                            </div>
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                          )}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">
+                          — Không gắn công việc (xuất lẻ) —
+                        </span>
+                      )
+                    }
+                  />
+                )}
+              />
+            </FormItem>
 
-            {/* Người nhận vật tư */}
-            <FormField
-              control={form.control}
-              name="recipient_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-1.5 text-emerald-900">
-                    <UserCheck className="h-4 w-4 text-emerald-600" />
-                    Người nhận vật tư (Tùy chọn)
-                  </FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger className="border-emerald-200">
-                        {selectedRecipient ? (
-                          <div className="flex items-center gap-2">
-                            <span>👤</span>
-                            <span className="font-medium">{selectedRecipient.full_name}</span>
-                            <Badge variant="outline" className="text-xs px-1.5 py-0 ml-1 bg-slate-50">
-                              {selectedRecipient.role === "OWNER" ? "Chủ vườn" : "Nhân viên"}
+            {/* Người nhận vật tư — Searchable */}
+            <FormItem>
+              <FormLabel className="flex items-center gap-1.5 text-emerald-900">
+                <UserCheck className="h-4 w-4 text-emerald-600" />
+                Người nhận vật tư (Tùy chọn)
+              </FormLabel>
+              <Controller
+                control={form.control}
+                name="recipient_id"
+                render={({ field }) => (
+                  <SearchableCombobox
+                    value={field.value || "none"}
+                    onChange={field.onChange}
+                    options={staffOptions}
+                    placeholder="— Không chọn —"
+                    searchPlaceholder="Tìm theo tên, email, chức vụ..."
+                    emptyText="Không tìm thấy nhân viên phù hợp"
+                    renderTrigger={(selected) =>
+                      selected && selected.value !== "none" ? (
+                        <span className="flex items-center gap-2">
+                          <span>👤</span>
+                          <span className="font-medium">{selected.label}</span>
+                          {selected.badge && (
+                            <Badge
+                              variant="outline"
+                              className={`text-xs px-1.5 py-0 ml-1 ${selected.badge.className}`}
+                            >
+                              {selected.badge.text}
                             </Badge>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">— Không chọn —</span>
-                        )}
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="none">— Không chọn —</SelectItem>
-                      {staffList.map((user) => (
-                        <SelectItem key={user.id} value={user.id}>
-                          <div className="flex items-center gap-2">
-                            <span>👤</span>
-                            <span>{user.full_name}</span>
-                            <span className="text-xs text-muted-foreground ml-1">
-                              ({user.role === "OWNER" ? "Chủ vườn" : "Nhân viên"})
-                            </span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                          )}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">— Không chọn —</span>
+                      )
+                    }
+                  />
+                )}
+              />
+            </FormItem>
 
             {/* Ghi chú */}
             <FormField
