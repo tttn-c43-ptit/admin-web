@@ -37,6 +37,21 @@ export default function GardenDetailPage() {
 
   const [activeZoneId, setActiveZoneId] = useState<string | null>(null);
   const [activePlantId, setActivePlantId] = useState<string | null>(null);
+  /** When set, map shows ONLY this plant and hides the rest */
+  const [isolatedPlantId, setIsolatedPlantId] = useState<string | null>(null);
+
+  const handleIsolatePlant = (plantId: string) => {
+    // Toggle isolation: clicking the eye on the same plant clears it
+    setIsolatedPlantId((prev) => (prev === plantId ? null : plantId));
+    setActivePlantId(plantId);
+  };
+
+  const handleSelectPlant = (plantId: string) => {
+    // Called when user clicks a marker on the map
+    setActivePlantId(plantId);
+    // Clear isolation so all plants are visible again on map click
+    setIsolatedPlantId(null);
+  };
 
   const { data: garden, isLoading } = useQuery<GardenDetail>({
     queryKey: queryKeys.gardenDetail(id),
@@ -165,10 +180,12 @@ export default function GardenDetailPage() {
             plants={plantsData?.items}
             activeZoneId={activeZoneId}
             activePlantId={activePlantId}
+            isolatedPlantId={isolatedPlantId}
             onDeleteZone={(zId) => deleteZoneMutation.mutate(zId)}
             onUpdatePlantPosition={(plantId, lat, lng, zoneId) => 
               updatePlantPositionMutation.mutate({ plantId, grid_x: lng, grid_y: lat, zone_id: zoneId })
             }
+            onSelectPlant={handleSelectPlant}
           />
         </div>
 
@@ -184,7 +201,9 @@ export default function GardenDetailPage() {
                 plants={plantsData?.items}
                 zones={zones}
                 activePlantId={activePlantId}
+                isolatedPlantId={isolatedPlantId}
                 onSelectPlant={(pId) => setActivePlantId(pId)}
+                onIsolatePlant={handleIsolatePlant}
                 onRefetchPlants={() => queryClient.invalidateQueries({ queryKey: ["plants_grid", id] })}
               />
             </TabsContent>

@@ -48,9 +48,13 @@ interface GardenMapProps {
   zones?: Zone[];
   activeZoneId?: string | null;
   activePlantId?: string | null;
+  /** When set, only this plant is shown on the map; others are hidden. */
+  isolatedPlantId?: string | null;
   readOnly?: boolean;
   onDeleteZone?: (zoneId: string) => void;
   onUpdatePlantPosition?: (plantId: string, lat: number, lng: number, zoneId?: string | null) => void;
+  /** Called when user clicks a plant marker on the map */
+  onSelectPlant?: (plantId: string) => void;
 }
 
 // Ray-casting point in polygon algorithm for GIS bounds validation
@@ -129,9 +133,11 @@ export default function GardenMap({
   zones,
   activeZoneId,
   activePlantId,
+  isolatedPlantId,
   readOnly = false,
   onDeleteZone,
   onUpdatePlantPosition,
+  onSelectPlant,
 }: GardenMapProps) {
   const { t } = useTranslation();
   const mapRef = useRef<HTMLDivElement>(null);
@@ -471,9 +477,13 @@ export default function GardenMap({
     // Render Individual Plants
     if (plants && plants.length > 0 && plantsGroup.current && polygon) {
       const bounds = polygon.getBounds();
-      const nw = bounds.getNorthWest();
 
-      plants.forEach((plant) => {
+      // If isolatedPlantId is set, only render that specific plant
+      const visiblePlants = isolatedPlantId
+        ? plants.filter((p) => p.id === isolatedPlantId)
+        : plants;
+
+      visiblePlants.forEach((plant) => {
         let pLat, pLng;
         const zonePoly = plant.zone_id ? zonePolyMapRef.current.get(plant.zone_id) : null;
         
@@ -493,8 +503,8 @@ export default function GardenMap({
         }
 
         const color = PLANT_STATUS_COLORS[plant.status]?.hex || PLANT_STATUS_COLORS.UNKNOWN.hex;
-        const isActive = activePlantId === plant.id;
-        const dotSize = isActive ? 18 : 12;
+        const isActive = activePlantId === plant.id || isolatedPlantId === plant.id;
+        const dotSize = isActive ? 20 : 12;
 
         const customIcon = L.divIcon({
           className: "bg-transparent border-0",
@@ -622,13 +632,20 @@ export default function GardenMap({
         );
 
         marker.bindPopup(popupHtml);
+
+        // Clicking a plant marker selects it in the panel
+        marker.on("click", () => {
+          if (onSelectPlant) onSelectPlant(plant.id);
+        });
+
         plantsGroup.current?.addLayer(marker);
 
         if (isActive) {
-          map.flyTo([pLat, pLng], Math.max(map.getZoom(), 18), { animate: true, duration: 0.8 });
+          const zoomLevel = isolatedPlantId ? Math.max(map.getZoom(), 20) : Math.max(map.getZoom(), 18);
+          map.flyTo([pLat, pLng], zoomLevel, { animate: true, duration: 0.8 });
           setTimeout(() => {
             marker.openPopup();
-          }, 300);
+          }, 850);
         }
       });
     }
@@ -657,7 +674,7 @@ export default function GardenMap({
         setHasUnsavedChanges(true);
       });
     }
-  }, [gardenId, initialBoundary, plants, zones, activeZoneId, readOnly, t]);
+  }, [gardenId, initialBoundary, plants, zones, activeZoneId, activePlantId, isolatedPlantId, readOnly, t, onSelectPlant]);
 
   const handleSaveBoundary = () => {
     if (!drawnItems.current || !onSave) return;
