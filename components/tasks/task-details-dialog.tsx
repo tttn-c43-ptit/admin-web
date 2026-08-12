@@ -13,9 +13,9 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import Image from "next/image";
 import { useTranslation } from "@/components/i18n-provider";
 import { TranslationKey } from "@/lib/i18n/translations";
+import { formatImageUrl } from "@/lib/utils";
 
 interface TaskDetailsDialogProps {
   task: TaskOut | null;
@@ -115,17 +115,42 @@ export function TaskDetailsDialog({ task, open, onOpenChange }: TaskDetailsDialo
               <div>
                 <h4 className="text-sm font-medium text-muted-foreground mb-2">{t("taskDetails.proofImages")}</h4>
                 <div className="grid grid-cols-2 gap-2">
-                  {task.proof_images.map((img, i) => (
-                    <div key={i} className="relative aspect-video rounded-md overflow-hidden bg-muted">
-                      <Image 
-                        src={img} 
-                        alt={`Proof ${i + 1}`} 
-                        fill 
-                        unoptimized
-                        className="object-cover"
-                      />
-                    </div>
-                  ))}
+                  {task.proof_images.map((img, i) => {
+                    const displayUrl = formatImageUrl(img);
+                    return (
+                      <a
+                        key={i}
+                        href={displayUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="relative block aspect-video rounded-md overflow-hidden bg-muted border hover:border-emerald-400 transition-colors group"
+                        title="Nhấn để xem ảnh đầy đủ"
+                      >
+                        <img
+                          src={displayUrl}
+                          alt={`Minh chứng ${i + 1}`}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                          onError={(e) => {
+                            // Fallback: show broken image placeholder
+                            const target = e.currentTarget;
+                            target.style.display = "none";
+                            const parent = target.parentElement;
+                            if (parent && !parent.querySelector(".img-error")) {
+                              const el = document.createElement("div");
+                              el.className = "img-error flex flex-col items-center justify-center h-full gap-1 text-slate-400";
+                              el.innerHTML = `<svg xmlns='http://www.w3.org/2000/svg' class='h-8 w-8' fill='none' viewBox='0 0 24 24' stroke='currentColor'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z'/></svg><span class='text-xs'>Không tải được ảnh</span>`;
+                              parent.appendChild(el);
+                            }
+                          }}
+                        />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-end">
+                          <span className="w-full text-center text-xs text-white bg-black/40 py-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            🔍 Xem ảnh #{i + 1}
+                          </span>
+                        </div>
+                      </a>
+                    );
+                  })}
                 </div>
               </div>
             )}

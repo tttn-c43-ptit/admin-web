@@ -29,7 +29,7 @@ export function ImageUploader({
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
       if (value.length + acceptedFiles.length > maxImages) {
-        toast.error(`You can only upload up to ${maxImages} images in total.`);
+        toast.error(`Chỉ được tải lên tối đa ${maxImages} ảnh.`);
         return;
       }
 
@@ -69,10 +69,10 @@ export function ImageUploader({
           newUrls.push(canonicalUrl);
         }
         onChange(newUrls);
-        toast.success("Image uploaded successfully");
+        toast.success("Tải ảnh lên thành công");
       } catch (error: unknown) {
         console.error("Upload error:", error);
-        toast.error(error instanceof Error ? error.message : "An error occurred during upload.");
+        toast.error(error instanceof Error ? error.message : "Đã xảy ra lỗi khi tải ảnh lên.");
       } finally {
         setIsUploading(false);
       }
@@ -108,18 +108,18 @@ export function ImageUploader({
         {isUploading ? (
           <div className="flex flex-col items-center text-muted-foreground">
             <Loader2 className="h-8 w-8 animate-spin mb-2 text-primary" />
-            <p className="text-sm font-medium">Uploading image to storage...</p>
+            <p className="text-sm font-medium">Đang tải ảnh lên...</p>
           </div>
         ) : (
           <div className="flex flex-col items-center text-muted-foreground">
             <UploadCloud className="h-8 w-8 mb-2" />
             <p className="text-sm font-medium">
               {isDragActive
-                ? "Drop the files here"
-                : "Drag & drop images here, or click to select"}
+                ? "Thả ảnh vào đây"
+                : "Kéo & thả ảnh vào đây, hoặc nhấn để chọn"}
             </p>
             <p className="text-xs mt-1">
-              Supports JPG, PNG, WEBP. Max {maxImages} images.
+              Hỗ trợ JPG, PNG, WEBP. Tối đa {maxImages} ảnh.
             </p>
           </div>
         )}

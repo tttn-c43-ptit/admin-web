@@ -15,6 +15,11 @@ const nextConfig: NextConfig = {
         hostname: "127.0.0.1",
       },
       {
+        // MinIO internal hostname (Docker)
+        protocol: "http",
+        hostname: "minio",
+      },
+      {
         protocol: "https",
         hostname: "**",
       },
