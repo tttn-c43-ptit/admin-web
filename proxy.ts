@@ -48,9 +48,12 @@ export function proxy(request: NextRequest) {
   // Auth routes: /login and /register are public when NOT logged in
   const isAuthRoute = pathname === '/login' || pathname === '/register';
 
+  // Public consumer traceability routes (no login required for consumers scanning QR)
+  const isPublicTraceRoute = pathname.startsWith('/trace');
+
   // ── Not logged in ──
   if (!token) {
-    if (isAuthRoute) return NextResponse.next();
+    if (isAuthRoute || isPublicTraceRoute) return NextResponse.next();
     // Any protected route → login
     return NextResponse.redirect(new URL('/login', request.url));
   }
