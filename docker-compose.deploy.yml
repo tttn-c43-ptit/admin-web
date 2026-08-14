@@ -1,0 +1,47 @@
+# =============================================================================
+# Standalone Docker Compose for Deploying Admin Web (Frontend Only)
+# =============================================================================
+# Cấu hình độc lập dành cho Frontend — KHÔNG gộp chung với Backend.
+#
+# CÁCH SỬ DỤNG:
+#
+# 1) Build image trên máy phát triển (hoặc CI/CD):
+#      docker build -t plantcare-web:latest .
+#      # Hoặc kèm địa chỉ API Backend cụ thể nếu muốn bake sẵn:
+#      docker build --build-arg NEXT_PUBLIC_API_URL=http://<IP_HOẶC_DOMAIN_BE>:8000 -t plantcare-web:latest .
+#
+#    Nếu chuyển sang máy chủ khác (không cần gửi mã nguồn):
+#      docker save plantcare-web:latest | gzip > plantcare-web.tar.gz
+#      # Trên máy chủ nhận file:
+#      docker load < plantcare-web.tar.gz
+#
+# 2) Khởi chạy trên máy chủ deploy:
+#      docker compose -f docker-compose.deploy.yml up -d
+#
+# 3) Tùy chỉnh qua biến môi trường (hoặc tạo file .env cạnh file này):
+#      WEB_IMAGE: Tên image docker (mặc định: plantcare-web:latest)
+#      WEB_PORT: Cổng public của Web (mặc định: 3000)
+#      NEXT_PUBLIC_API_URL: Địa chỉ gọi API Backend (mặc định: http://localhost:8000)
+# =============================================================================
+
+name: plantcare-web
+
+services:
+  web:
+    image: ${WEB_IMAGE:-plantcare-web:latest}
+    container_name: plantcare-web-1
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: "0.0.0.0"
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+      NEXT_PUBLIC_MAPBOX_TOKEN: ${NEXT_PUBLIC_MAPBOX_TOKEN:-}
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3000', (r) => {if (r.statusCode < 500) process.exit(0); else process.exit(1);})"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
