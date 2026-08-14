@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { getCachedImage } from "./image-cache"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -20,6 +21,10 @@ export function formatImageUrl(url: string | null | undefined): string {
   if (!url) return "";
   if (url.startsWith("blob:") || url.startsWith("data:")) return url;
 
+  // Check client-side cached image first (exact match)
+  const cached = getCachedImage(url);
+  if (cached) return cached;
+
   // On Production (e.g. Vercel connecting to https://brec.io)
   const isRemoteApi =
     API_URL.startsWith("https://") ||
@@ -29,7 +34,10 @@ export function formatImageUrl(url: string | null | undefined): string {
     if (
       url.includes("minio:9000") ||
       url.includes("localhost:9000") ||
-      url.includes("127.0.0.1:9000")
+      url.includes("127.0.0.1:9000") ||
+      url.includes("192.168.") ||
+      url.includes("10.") ||
+      url.includes("172.")
     ) {
       const cleanApi = API_URL.replace(/\/api\/?$/, "").replace(/\/$/, "");
       const path = url.replace(/^https?:\/\/[^\/]+/, "");

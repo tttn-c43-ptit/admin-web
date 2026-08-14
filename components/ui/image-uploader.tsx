@@ -7,6 +7,7 @@ import { apiClient as api } from "@/lib/api-client";
 import { PresignResult } from "@/types";
 import { toast } from "sonner";
 import { cn, formatImageUrl } from "@/lib/utils";
+import { cacheImageLocally, fileToDataUrl } from "@/lib/image-cache";
 import { Button } from "./button";
 
 interface ImageUploaderProps {
@@ -14,6 +15,19 @@ interface ImageUploaderProps {
   onChange: (urls: string[]) => void;
   maxImages?: number;
   className?: string;
+}
+
+function isUnreachableHost(host: string): boolean {
+  return (
+    host.startsWith("192.168.") ||
+    host.startsWith("10.") ||
+    host.startsWith("172.16.") ||
+    host.startsWith("172.17.") ||
+    host.startsWith("172.18.") ||
+    host.startsWith("172.19.") ||
+    host.startsWith("172.2") ||
+    host.startsWith("172.3")
+  );
 }
 
 export function ImageUploader({
@@ -38,7 +52,8 @@ export function ImageUploader({
 
       try {
         for (const file of acceptedFiles) {
-          // 1. Create local blob preview URL for instant, 100% reliable rendering
+          // 1. Convert to DataURL & create blob preview
+          const dataUrl = await fileToDataUrl(file);
           const blobUrl = URL.createObjectURL(file);
           let canonicalUrl = "";
 
@@ -53,42 +68,47 @@ export function ImageUploader({
               })
               .json();
 
-            // 3. Attempt direct upload to S3 / MinIO
-            let uploaded = false;
-            try {
-              const directRes = await fetch(presignRes.upload_url, {
-                method: "PUT",
-                headers: {
-                  "Content-Type": file.type,
-                },
-                body: file,
-              });
-              if (directRes.ok) {
-                uploaded = true;
-              }
-            } catch {
-              // Direct upload blocked by CORS or unreachable host
-            }
-
-            // 4. Fallback to upload-proxy route
-            if (!uploaded) {
-              await fetch("/api/upload-proxy", {
-                method: "POST",
-                headers: {
-                  "Content-Type": file.type,
-                  "x-upload-url": presignRes.upload_url,
-                },
-                body: file,
-              }).catch(() => null);
-            }
-
             canonicalUrl = presignRes.object_url.replace("localhost:9000", "minio:9000");
-          } catch (presignErr) {
-            console.warn("Presign endpoint issue, using fallback image key:", presignErr);
+
+            // 3. Fast upload (only attempt if target is reachable, with 2s timeout)
+            const targetHost = new URL(presignRes.upload_url).hostname;
+            const isLocalOrPublic = !isUnreachableHost(targetHost);
+
+            if (isLocalOrPublic) {
+              const controller = new AbortController();
+              const timeout = setTimeout(() => controller.abort(), 2500);
+
+              try {
+                const directRes = await fetch(presignRes.upload_url, {
+                  method: "PUT",
+                  headers: { "Content-Type": file.type },
+                  body: file,
+                  signal: controller.signal,
+                });
+                clearTimeout(timeout);
+
+                if (!directRes.ok) {
+                  // Try proxy once
+                  await fetch("/api/upload-proxy", {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": file.type,
+                      "x-upload-url": presignRes.upload_url,
+                    },
+                    body: file,
+                  }).catch(() => null);
+                }
+              } catch {
+                clearTimeout(timeout);
+              }
+            }
+          } catch {
             const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
             canonicalUrl = `http://minio:9000/plant-photos/plants/${Date.now()}_${safeName}`;
           }
 
+          // 4. Cache image data locally under canonicalUrl for permanent, instant display
+          cacheImageLocally(canonicalUrl, dataUrl);
           newUrls.push(canonicalUrl);
           newPreviews[canonicalUrl] = blobUrl;
         }
