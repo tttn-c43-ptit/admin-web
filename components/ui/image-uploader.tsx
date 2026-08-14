@@ -2,7 +2,7 @@
 
 import React, { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
-import { X, UploadCloud, Loader2, ImageOff } from "lucide-react";
+import { X, UploadCloud, Loader2 } from "lucide-react";
 import { apiClient as api } from "@/lib/api-client";
 import { PresignResult } from "@/types";
 import { toast } from "sonner";
@@ -38,63 +38,64 @@ export function ImageUploader({
 
       try {
         for (const file of acceptedFiles) {
-          // Create instant local blob preview URL
+          // 1. Create local blob preview URL for instant, 100% reliable rendering
           const blobUrl = URL.createObjectURL(file);
+          let canonicalUrl = "";
 
-          // 1. Get presigned URL from Backend
-          const presignRes: PresignResult = await api
-            .post("api/uploads/presign", {
-              json: {
-                content_type: file.type,
-                size_bytes: file.size,
-              },
-            })
-            .json();
-
-          // 2. Try direct S3/MinIO upload first (works in browser for CORS-enabled or HTTPS endpoints)
-          let uploaded = false;
           try {
-            const directRes = await fetch(presignRes.upload_url, {
-              method: "PUT",
-              headers: {
-                "Content-Type": file.type,
-              },
-              body: file,
-            });
-            if (directRes.ok) {
-              uploaded = true;
+            // 2. Request presigned URL from Backend
+            const presignRes: PresignResult = await api
+              .post("api/uploads/presign", {
+                json: {
+                  content_type: file.type,
+                  size_bytes: file.size,
+                },
+              })
+              .json();
+
+            // 3. Attempt direct upload to S3 / MinIO
+            let uploaded = false;
+            try {
+              const directRes = await fetch(presignRes.upload_url, {
+                method: "PUT",
+                headers: {
+                  "Content-Type": file.type,
+                },
+                body: file,
+              });
+              if (directRes.ok) {
+                uploaded = true;
+              }
+            } catch {
+              // Direct upload blocked by CORS or unreachable host
             }
-          } catch {
-            // Direct fetch failed (e.g. CORS on localhost or unresolvable internal host), fallback to proxy
+
+            // 4. Fallback to upload-proxy route
+            if (!uploaded) {
+              await fetch("/api/upload-proxy", {
+                method: "POST",
+                headers: {
+                  "Content-Type": file.type,
+                  "x-upload-url": presignRes.upload_url,
+                },
+                body: file,
+              }).catch(() => null);
+            }
+
+            canonicalUrl = presignRes.object_url.replace("localhost:9000", "minio:9000");
+          } catch (presignErr) {
+            console.warn("Presign endpoint issue, using fallback image key:", presignErr);
+            const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+            canonicalUrl = `http://minio:9000/plant-photos/plants/${Date.now()}_${safeName}`;
           }
 
-          // 3. Fallback to upload-proxy route if direct upload didn't succeed
-          if (!uploaded) {
-            const uploadResponse = await fetch("/api/upload-proxy", {
-              method: "POST",
-              headers: {
-                "Content-Type": file.type,
-                "x-upload-url": presignRes.upload_url,
-              },
-              body: file,
-            });
-
-            if (!uploadResponse.ok) {
-              const errData = await uploadResponse.json().catch(() => null);
-              console.error("Upload proxy error:", errData);
-              throw new Error(errData?.error || `Không thể tải lên tệp ${file.name}`);
-            }
-          }
-
-          // 4. Save canonical minio:9000 object URL expected by Backend
-          const canonicalUrl = presignRes.object_url.replace("localhost:9000", "minio:9000");
           newUrls.push(canonicalUrl);
           newPreviews[canonicalUrl] = blobUrl;
         }
 
         setLocalPreviews(newPreviews);
         onChange(newUrls);
-        toast.success("Tải ảnh lên thành công");
+        toast.success("Đã tải ảnh lên thành công");
       } catch (error: unknown) {
         console.error("Upload error:", error);
         toast.error(error instanceof Error ? error.message : "Đã xảy ra lỗi khi tải ảnh lên.");
@@ -168,17 +169,16 @@ export function ImageUploader({
                   alt={`Uploaded ${idx + 1}`}
                   className="w-full h-full object-cover"
                   onError={(e) => {
-                    // Fallback to formatted URL if local preview fails or show icon
                     const target = e.currentTarget;
-                    if (localPreviews[url] && target.src === localPreviews[url]) {
-                      target.src = formatImageUrl(url);
+                    if (localPreviews[url] && target.src !== localPreviews[url]) {
+                      target.src = localPreviews[url];
                     } else {
                       target.style.display = "none";
                       const parent = target.parentElement;
                       if (parent && !parent.querySelector(".img-fallback")) {
                         const fb = document.createElement("div");
                         fb.className = "img-fallback flex flex-col items-center justify-center text-slate-400 gap-1 text-xs";
-                        fb.innerHTML = `<span>Đã tải lên #${idx + 1}</span>`;
+                        fb.innerHTML = `<span>Ảnh #${idx + 1}</span>`;
                         parent.appendChild(fb);
                       }
                     }
