@@ -26,7 +26,7 @@ import {
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { AIDiagnosisDialog } from "@/components/plants/ai-diagnosis-dialog";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatImageUrl } from "@/lib/utils";
 import { PrintSingleTagDialog } from "@/components/plants/print-single-tag-dialog";
 import QRCode from "qrcode";
 import JsBarcode from "jsbarcode";
@@ -81,10 +81,6 @@ export default function PlantDetailPage() {
     queryFn: () => api.get(`api/plants/${plantId}/timeline?limit=50&offset=0`).json(),
   });
 
-  const formatImageUrl = (url: string) => {
-    if (!url) return "";
-    return url.replace("http://minio:9000", "http://localhost:9000");
-  };
 
   const handleDeletePlant = async () => {
     setIsDeleting(true);

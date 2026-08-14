@@ -2,14 +2,12 @@
 
 import React, { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
-import { X, UploadCloud, Loader2 } from "lucide-react";
+import { X, UploadCloud, Loader2, ImageOff } from "lucide-react";
 import { apiClient as api } from "@/lib/api-client";
 import { PresignResult } from "@/types";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { cn, formatImageUrl } from "@/lib/utils";
 import { Button } from "./button";
-
-import { formatImageUrl } from "@/lib/utils";
 
 interface ImageUploaderProps {
   value: string[];
@@ -25,6 +23,7 @@ export function ImageUploader({
   className,
 }: ImageUploaderProps) {
   const [isUploading, setIsUploading] = useState(false);
+  const [localPreviews, setLocalPreviews] = useState<Record<string, string>>({});
 
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
@@ -35,9 +34,13 @@ export function ImageUploader({
 
       setIsUploading(true);
       const newUrls = [...value];
+      const newPreviews = { ...localPreviews };
 
       try {
         for (const file of acceptedFiles) {
+          // Create instant local blob preview URL
+          const blobUrl = URL.createObjectURL(file);
+
           // 1. Get presigned URL from Backend
           const presignRes: PresignResult = await api
             .post("api/uploads/presign", {
@@ -86,7 +89,10 @@ export function ImageUploader({
           // 4. Save canonical minio:9000 object URL expected by Backend
           const canonicalUrl = presignRes.object_url.replace("localhost:9000", "minio:9000");
           newUrls.push(canonicalUrl);
+          newPreviews[canonicalUrl] = blobUrl;
         }
+
+        setLocalPreviews(newPreviews);
         onChange(newUrls);
         toast.success("Tải ảnh lên thành công");
       } catch (error: unknown) {
@@ -96,7 +102,7 @@ export function ImageUploader({
         setIsUploading(false);
       }
     },
-    [value, maxImages, onChange]
+    [value, maxImages, onChange, localPreviews]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -110,6 +116,13 @@ export function ImageUploader({
   });
 
   const removeImage = (indexToRemove: number) => {
+    const urlToRemove = value[indexToRemove];
+    if (urlToRemove && localPreviews[urlToRemove]) {
+      URL.revokeObjectURL(localPreviews[urlToRemove]);
+      const nextPreviews = { ...localPreviews };
+      delete nextPreviews[urlToRemove];
+      setLocalPreviews(nextPreviews);
+    }
     onChange(value.filter((_, idx) => idx !== indexToRemove));
   };
 
@@ -146,27 +159,46 @@ export function ImageUploader({
 
       {value.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {value.map((url, idx) => (
-            <div key={idx} className="relative group rounded-md overflow-hidden border">
-              <img
-                src={formatImageUrl(url)}
-                alt={`Uploaded ${idx + 1}`}
-                className="w-full h-24 object-cover"
-              />
-              <Button
-                type="button"
-                variant="destructive"
-                size="icon"
-                className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  removeImage(idx);
-                }}
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            </div>
-          ))}
+          {value.map((url, idx) => {
+            const displaySrc = localPreviews[url] || formatImageUrl(url);
+            return (
+              <div key={idx} className="relative group rounded-md overflow-hidden border bg-slate-100 h-24 flex items-center justify-center">
+                <img
+                  src={displaySrc}
+                  alt={`Uploaded ${idx + 1}`}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    // Fallback to formatted URL if local preview fails or show icon
+                    const target = e.currentTarget;
+                    if (localPreviews[url] && target.src === localPreviews[url]) {
+                      target.src = formatImageUrl(url);
+                    } else {
+                      target.style.display = "none";
+                      const parent = target.parentElement;
+                      if (parent && !parent.querySelector(".img-fallback")) {
+                        const fb = document.createElement("div");
+                        fb.className = "img-fallback flex flex-col items-center justify-center text-slate-400 gap-1 text-xs";
+                        fb.innerHTML = `<span>Đã tải lên #${idx + 1}</span>`;
+                        parent.appendChild(fb);
+                      }
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="icon"
+                  className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeImage(idx);
+                  }}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
