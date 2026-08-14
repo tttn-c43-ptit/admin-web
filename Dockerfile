@@ -12,8 +12,8 @@ RUN corepack enable
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # Next.js cần biến NEXT_PUBLIC_* tại thời điểm build (không phải chỉ runtime)
-ARG NEXT_PUBLIC_API_URL
-ARG NEXT_PUBLIC_MAPBOX_TOKEN
+ARG NEXT_PUBLIC_API_URL=http://localhost:8000
+ARG NEXT_PUBLIC_MAPBOX_TOKEN=
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 ENV NEXT_PUBLIC_MAPBOX_TOKEN=${NEXT_PUBLIC_MAPBOX_TOKEN}
 RUN pnpm build
