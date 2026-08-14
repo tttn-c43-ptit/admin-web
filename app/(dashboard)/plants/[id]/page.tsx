@@ -263,30 +263,42 @@ export default function PlantDetailPage() {
                     </div>
                     {entry.log.note && <p className="text-sm text-muted-foreground">{entry.log.note}</p>}
                     {entry.log.images && entry.log.images.length > 0 && (
-                      <div className="flex flex-wrap gap-3 mt-3">
+                      <div className="flex flex-wrap gap-3.5 mt-3">
                         {entry.log.images.map((img, i) => {
                           const displayUrl = formatImageUrl(img);
                           return (
-                            <div key={i} className="flex flex-col items-start gap-1.5 bg-muted/30 p-1.5 rounded-lg border">
-                              <img
-                                src={displayUrl}
-                                alt="Care Log Leaf"
-                                className="h-28 w-28 rounded-md object-cover border bg-white cursor-pointer hover:opacity-90 transition-opacity"
-                                onError={(e) => {
-                                  const target = e.target as HTMLImageElement;
-                                  target.onerror = null;
-                                  target.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='112' height='112' viewBox='0 0 24 24' fill='none' stroke='%23059669' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z'/><path d='M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12'/></svg>";
-                                }}
+                            <div
+                              key={i}
+                              className="group relative rounded-xl overflow-hidden border border-slate-200/80 bg-slate-900 shadow-sm hover:shadow-md transition-all duration-300 w-32 flex flex-col"
+                            >
+                              <div
+                                className="relative h-28 w-full overflow-hidden bg-slate-100 cursor-pointer"
                                 onClick={() => {
                                   setAiTargetLog(entry.log.id);
                                   setAiTargetImage(img);
                                   setAiDialogOpen(true);
                                 }}
-                              />
+                              >
+                                <img
+                                  src={displayUrl}
+                                  alt="Care Log Leaf"
+                                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.onerror = null;
+                                    target.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='112' height='112' viewBox='0 0 24 24' fill='none' stroke='%23059669' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z'/><path d='M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12'/></svg>";
+                                  }}
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-1.5 justify-center">
+                                  <span className="text-[10px] text-white font-medium flex items-center gap-1">
+                                    <Sparkles className="h-3 w-3 text-emerald-300" /> Xem chẩn đoán
+                                  </span>
+                                </div>
+                              </div>
                               <Button
                                 size="sm"
-                                variant="outline"
-                                className="w-full h-7 text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-300 font-semibold gap-1"
+                                variant="ghost"
+                                className="h-7 text-[11px] font-semibold text-emerald-700 bg-emerald-50/80 hover:bg-emerald-100 hover:text-emerald-800 rounded-none border-t border-emerald-100 gap-1"
                                 onClick={() => {
                                   setAiTargetLog(entry.log.id);
                                   setAiTargetImage(img);
