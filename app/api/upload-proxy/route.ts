@@ -1,6 +1,37 @@
 import { NextResponse } from "next/server";
 import http from "http";
 
+export const maxDuration = 30; // Max execution duration for Vercel serverless functions
+
+function isPrivateIp(hostname: string): boolean {
+  if (
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname === "minio" ||
+    hostname.startsWith("192.168.") ||
+    hostname.startsWith("10.") ||
+    hostname.startsWith("172.16.") ||
+    hostname.startsWith("172.17.") ||
+    hostname.startsWith("172.18.") ||
+    hostname.startsWith("172.19.") ||
+    hostname.startsWith("172.20.") ||
+    hostname.startsWith("172.21.") ||
+    hostname.startsWith("172.22.") ||
+    hostname.startsWith("172.23.") ||
+    hostname.startsWith("172.24.") ||
+    hostname.startsWith("172.25.") ||
+    hostname.startsWith("172.26.") ||
+    hostname.startsWith("172.27.") ||
+    hostname.startsWith("172.28.") ||
+    hostname.startsWith("172.29.") ||
+    hostname.startsWith("172.30.") ||
+    hostname.startsWith("172.31.")
+  ) {
+    return true;
+  }
+  return false;
+}
+
 export async function POST(req: Request) {
   try {
     const uploadUrl = req.headers.get("x-upload-url");
@@ -8,7 +39,7 @@ export async function POST(req: Request) {
 
     if (!uploadUrl) {
       return NextResponse.json(
-        { error: "Missing x-upload-url header" },
+        { error: "Thiếu header x-upload-url" },
         { status: 400 }
       );
     }
@@ -18,33 +49,55 @@ export async function POST(req: Request) {
     const isHttps = targetUrlObj.protocol === "https:";
     const signedHost = targetUrlObj.host;
 
-    // For HTTPS or remote cloud storage (Vercel, Production brec.io, AWS S3):
-    // Use native fetch to stream upload directly
-    if (isHttps || (!targetUrlObj.hostname.includes("localhost") && !targetUrlObj.hostname.includes("minio") && !targetUrlObj.hostname.includes("127.0.0.1"))) {
-      const upstreamRes = await fetch(uploadUrl, {
-        method: "PUT",
-        headers: {
-          "Content-Type": contentType,
-        },
-        body: fileBuffer,
-      });
-
-      if (upstreamRes.ok) {
-        return NextResponse.json({ success: true });
-      }
-
-      const errText = await upstreamRes.text().catch(() => "");
-      console.error("Upload proxy upstream error:", upstreamRes.status, errText);
+    // Check if running on cloud (Vercel) while target is a private LAN IP
+    const isCloud = !!process.env.VERCEL || process.env.NODE_ENV === "production";
+    if (isCloud && isPrivateIp(targetUrlObj.hostname) && targetUrlObj.hostname !== "127.0.0.1" && targetUrlObj.hostname !== "localhost") {
+      console.error(`Upload proxy error: Cannot reach private LAN host ${targetUrlObj.hostname} from cloud.`);
       return NextResponse.json(
-        { error: `Upload failed: ${upstreamRes.status} ${upstreamRes.statusText}` },
-        { status: upstreamRes.status || 500 }
+        {
+          error: `Máy chủ lưu trữ ảnh đang ở địa chỉ mạng nội bộ (${targetUrlObj.hostname}:${targetUrlObj.port || 9000}) không thể truy cập từ internet. Vui lòng cấu hình public domain cho MinIO/S3 trên server Backend.`,
+        },
+        { status: 502 }
       );
     }
 
-    // For local MinIO (Docker / Localhost dev environment):
-    const targetHost = process.env.NODE_ENV === "production" && process.env.HOSTNAME === "0.0.0.0"
-      ? (process.env.MINIO_HOST || "host.docker.internal")
-      : "127.0.0.1";
+    // For HTTPS or remote cloud storage (AWS S3, Cloudflare R2, public MinIO domain):
+    if (isHttps || (!isPrivateIp(targetUrlObj.hostname))) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+        const upstreamRes = await fetch(uploadUrl, {
+          method: "PUT",
+          headers: {
+            "Content-Type": contentType,
+          },
+          body: fileBuffer,
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+
+        if (upstreamRes.ok) {
+          return NextResponse.json({ success: true });
+        }
+
+        const errText = await upstreamRes.text().catch(() => "");
+        console.error("Upload proxy upstream error:", upstreamRes.status, errText);
+        return NextResponse.json(
+          { error: `Tải lên máy chủ lưu trữ thất bại: HTTP ${upstreamRes.status}` },
+          { status: upstreamRes.status || 500 }
+        );
+      } catch (err: unknown) {
+        console.error("Upload proxy remote fetch error:", err);
+        return NextResponse.json(
+          { error: `Không thể kết nối đến máy chủ lưu trữ (${targetUrlObj.hostname}).` },
+          { status: 502 }
+        );
+      }
+    }
+
+    // For local dev MinIO (Docker / Localhost):
+    const targetHost = "127.0.0.1";
     const targetPort = targetUrlObj.port ? parseInt(targetUrlObj.port, 10) : 9000;
     const pathAndQuery = uploadUrl.substring(uploadUrl.indexOf("/", 8));
 
@@ -59,6 +112,7 @@ export async function POST(req: Request) {
           "Host": signedHost,
           "Content-Length": Buffer.byteLength(fileBuffer),
         },
+        timeout: 10000,
       };
 
       const reqProxy = http.request(options, (resProxy) => {
@@ -81,34 +135,33 @@ export async function POST(req: Request) {
         });
       });
 
+      reqProxy.on("timeout", () => {
+        reqProxy.destroy();
+        resolve(
+          NextResponse.json(
+            { error: `Kết nối đến MinIO (${targetUrlObj.hostname}) bị quá hạn thời gian (Timeout).` },
+            { status: 504 }
+          )
+        );
+      });
+
       reqProxy.on("error", (e) => {
-        console.error("Upload proxy internal error, trying direct fetch fallback:", e);
-        fetch(uploadUrl, {
-          method: "PUT",
-          headers: { "Content-Type": contentType },
-          body: fileBuffer,
-        })
-          .then((r) => {
-            if (r.ok) resolve(NextResponse.json({ success: true }));
-            else resolve(NextResponse.json({ error: "Storage upload failed" }, { status: 500 }));
-          })
-          .catch((err) => {
-            resolve(
-              NextResponse.json(
-                { error: `Internal server error during upload proxy: ${e.message}` },
-                { status: 500 }
-              )
-            );
-          });
+        console.error("Upload proxy internal error:", e);
+        resolve(
+          NextResponse.json(
+            { error: `Không thể kết nối đến máy chủ MinIO nội bộ (${targetUrlObj.hostname}:${targetPort}).` },
+            { status: 502 }
+          )
+        );
       });
 
       reqProxy.write(Buffer.from(fileBuffer));
       reqProxy.end();
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Upload proxy internal error:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Internal server error during upload proxy" },
+      { error: error instanceof Error ? error.message : "Đã xảy ra lỗi trong quá trình tải ảnh." },
       { status: 500 }
     );
   }
