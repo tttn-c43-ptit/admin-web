@@ -48,23 +48,42 @@ export function ImageUploader({
             })
             .json();
 
-          // 2. Upload file through Next.js proxy route to preserve MinIO presigned signature
-          const uploadResponse = await fetch("/api/upload-proxy", {
-            method: "POST",
-            headers: {
-              "Content-Type": file.type,
-              "x-upload-url": presignRes.upload_url,
-            },
-            body: file,
-          });
-
-          if (!uploadResponse.ok) {
-            const errData = await uploadResponse.json().catch(() => null);
-            console.error("Upload proxy error:", errData);
-            throw new Error(errData?.error || `Failed to upload ${file.name}`);
+          // 2. Try direct S3/MinIO upload first (works in browser for CORS-enabled or HTTPS endpoints)
+          let uploaded = false;
+          try {
+            const directRes = await fetch(presignRes.upload_url, {
+              method: "PUT",
+              headers: {
+                "Content-Type": file.type,
+              },
+              body: file,
+            });
+            if (directRes.ok) {
+              uploaded = true;
+            }
+          } catch {
+            // Direct fetch failed (e.g. CORS on localhost or unresolvable internal host), fallback to proxy
           }
 
-          // 3. Save canonical minio:9000 object URL expected by Backend
+          // 3. Fallback to upload-proxy route if direct upload didn't succeed
+          if (!uploaded) {
+            const uploadResponse = await fetch("/api/upload-proxy", {
+              method: "POST",
+              headers: {
+                "Content-Type": file.type,
+                "x-upload-url": presignRes.upload_url,
+              },
+              body: file,
+            });
+
+            if (!uploadResponse.ok) {
+              const errData = await uploadResponse.json().catch(() => null);
+              console.error("Upload proxy error:", errData);
+              throw new Error(errData?.error || `Không thể tải lên tệp ${file.name}`);
+            }
+          }
+
+          // 4. Save canonical minio:9000 object URL expected by Backend
           const canonicalUrl = presignRes.object_url.replace("localhost:9000", "minio:9000");
           newUrls.push(canonicalUrl);
         }

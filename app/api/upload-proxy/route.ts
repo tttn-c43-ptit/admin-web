@@ -14,18 +14,44 @@ export async function POST(req: Request) {
     }
 
     const fileBuffer = await req.arrayBuffer();
-
     const targetUrlObj = new URL(uploadUrl);
-    // Extract exact Host signed in the presigned URL (e.g. "localhost:9000" or "minio:9000")
+    const isHttps = targetUrlObj.protocol === "https:";
     const signedHost = targetUrlObj.host;
 
-    // Extract exact path and query without parsing to preserve S3 V4 Signature
+    // For HTTPS or remote cloud storage (Vercel, Production brec.io, AWS S3):
+    // Use native fetch to stream upload directly
+    if (isHttps || (!targetUrlObj.hostname.includes("localhost") && !targetUrlObj.hostname.includes("minio") && !targetUrlObj.hostname.includes("127.0.0.1"))) {
+      const upstreamRes = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: {
+          "Content-Type": contentType,
+        },
+        body: fileBuffer,
+      });
+
+      if (upstreamRes.ok) {
+        return NextResponse.json({ success: true });
+      }
+
+      const errText = await upstreamRes.text().catch(() => "");
+      console.error("Upload proxy upstream error:", upstreamRes.status, errText);
+      return NextResponse.json(
+        { error: `Upload failed: ${upstreamRes.status} ${upstreamRes.statusText}` },
+        { status: upstreamRes.status || 500 }
+      );
+    }
+
+    // For local MinIO (Docker / Localhost dev environment):
+    const targetHost = process.env.NODE_ENV === "production" && process.env.HOSTNAME === "0.0.0.0"
+      ? (process.env.MINIO_HOST || "host.docker.internal")
+      : "127.0.0.1";
+    const targetPort = targetUrlObj.port ? parseInt(targetUrlObj.port, 10) : 9000;
     const pathAndQuery = uploadUrl.substring(uploadUrl.indexOf("/", 8));
 
     return new Promise<Response>((resolve) => {
       const options = {
-        hostname: "localhost",
-        port: 9000,
+        hostname: targetHost,
+        port: targetPort,
         path: pathAndQuery,
         method: "PUT",
         headers: {
@@ -56,13 +82,24 @@ export async function POST(req: Request) {
       });
 
       reqProxy.on("error", (e) => {
-        console.error("Upload proxy internal error:", e);
-        resolve(
-          NextResponse.json(
-            { error: "Internal server error during upload proxy" },
-            { status: 500 }
-          )
-        );
+        console.error("Upload proxy internal error, trying direct fetch fallback:", e);
+        fetch(uploadUrl, {
+          method: "PUT",
+          headers: { "Content-Type": contentType },
+          body: fileBuffer,
+        })
+          .then((r) => {
+            if (r.ok) resolve(NextResponse.json({ success: true }));
+            else resolve(NextResponse.json({ error: "Storage upload failed" }, { status: 500 }));
+          })
+          .catch((err) => {
+            resolve(
+              NextResponse.json(
+                { error: `Internal server error during upload proxy: ${e.message}` },
+                { status: 500 }
+              )
+            );
+          });
       });
 
       reqProxy.write(Buffer.from(fileBuffer));
@@ -71,7 +108,7 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error("Upload proxy internal error:", error);
     return NextResponse.json(
-      { error: "Internal server error during upload proxy" },
+      { error: error instanceof Error ? error.message : "Internal server error during upload proxy" },
       { status: 500 }
     );
   }
