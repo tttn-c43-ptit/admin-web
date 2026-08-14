@@ -20,7 +20,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-// @ts-expect-error qrcode-missing-types
 import QRCode from "qrcode";
 import JsBarcode from "jsbarcode";
 import { PDFDownloadLink, Document, Page, Text, View, StyleSheet, Image as PdfImage } from "@react-pdf/renderer";

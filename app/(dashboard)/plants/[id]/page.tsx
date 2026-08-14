@@ -28,7 +28,6 @@ import { useRouter } from "next/navigation";
 import { AIDiagnosisDialog } from "@/components/plants/ai-diagnosis-dialog";
 import { formatDate } from "@/lib/utils";
 import { PrintSingleTagDialog } from "@/components/plants/print-single-tag-dialog";
-// @ts-expect-error no types available
 import QRCode from "qrcode";
 import JsBarcode from "jsbarcode";
 import { ArrowLeft, Edit2, History, QrCode, Plus, Images, Sparkles, Trash2, Printer } from "lucide-react";

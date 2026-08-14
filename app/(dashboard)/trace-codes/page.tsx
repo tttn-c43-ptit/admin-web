@@ -17,6 +17,7 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
@@ -31,6 +32,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, MoreHorizontal, QrCode, Trash2, ExternalLink, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { TraceCodeFormDialog } from "@/components/trace-codes/trace-code-form-dialog";
+import { TraceQrDialog } from "@/components/trace-codes/trace-qr-dialog";
 import Link from "next/link";
 import { useTranslation } from "@/components/i18n-provider";
 
@@ -41,6 +43,7 @@ export default function TraceCodesPage() {
   const pageSize = 10;
   
   const [formOpen, setFormOpen] = useState(false);
+  const [selectedQrItem, setSelectedQrItem] = useState<TraceCode | null>(null);
 
   const { data: traceData, isLoading, refetch } = useQuery({
     queryKey: ["trace-codes", gardenId, pageIndex],
@@ -53,10 +56,10 @@ export default function TraceCodesPage() {
     if (!confirm(t("trace.deleteConfirm"))) return;
     try {
       await api.delete(`api/trace-codes/${id}`);
-      toast.success("Trace code deleted");
+      toast.success("Đã xóa mã truy xuất thành công");
       refetch();
     } catch (err) {
-      toast.error("Failed to delete trace code");
+      toast.error("Không thể xóa mã truy xuất");
     }
   };
 
@@ -65,10 +68,22 @@ export default function TraceCodesPage() {
       accessorKey: "code",
       header: t("trace.colCode"),
       cell: ({ row }) => (
-        <div className="font-mono font-medium text-primary">
-          <Link href={`/trace/${row.original.code}`} target="_blank" className="hover:underline flex items-center gap-1">
-            {row.original.code} <ExternalLink className="h-3 w-3" />
-          </Link>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="h-7 w-7 text-emerald-600 hover:bg-emerald-50 hover:border-emerald-400"
+            title="Xem mã QR tem nhãn"
+            onClick={() => setSelectedQrItem(row.original)}
+          >
+            <QrCode className="h-4 w-4" />
+          </Button>
+          <div className="font-mono font-bold text-primary">
+            <Link href={`/trace/${row.original.code}`} target="_blank" className="hover:underline flex items-center gap-1">
+              {row.original.code} <ExternalLink className="h-3 w-3 text-slate-400" />
+            </Link>
+          </div>
         </div>
       ),
     },
@@ -106,23 +121,28 @@ export default function TraceCodesPage() {
               <MoreHorizontal className="h-4 w-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>{t("trace.colActions")}</DropdownMenuLabel>
-              <DropdownMenuItem>
-                <Link href={`/trace/${item.code}`} target="_blank" className="cursor-pointer w-full flex items-center">
-                  <ExternalLink className="mr-2 h-4 w-4" /> {t("trace.viewPublicPage")}
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => {
-                  navigator.clipboard.writeText(`${window.location.origin}/trace/${item.code}`);
-                  toast.success(t("trace.linkCopied"));
-                }}
-              >
-                <Copy className="mr-2 h-4 w-4" /> {t("trace.copyTraceLink")}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleDelete(item.id)} className="text-red-600">
-                <Trash2 className="mr-2 h-4 w-4" /> {t("action.delete")}
-              </DropdownMenuItem>
+              <DropdownMenuGroup>
+                <DropdownMenuLabel>{t("trace.colActions")}</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => setSelectedQrItem(item)}>
+                  <QrCode className="mr-2 h-4 w-4 text-emerald-600" /> Xem & Tải mã QR tem nhãn
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <Link href={`/trace/${item.code}`} target="_blank" className="cursor-pointer w-full flex items-center">
+                    <ExternalLink className="mr-2 h-4 w-4" /> {t("trace.viewPublicPage")}
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    navigator.clipboard.writeText(`${window.location.origin}/trace/${item.code}`);
+                    toast.success(t("trace.linkCopied"));
+                  }}
+                >
+                  <Copy className="mr-2 h-4 w-4" /> {t("trace.copyTraceLink")}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleDelete(item.id)} className="text-red-600">
+                  <Trash2 className="mr-2 h-4 w-4" /> {t("action.delete")}
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
             </DropdownMenuContent>
           </DropdownMenu>
         );
@@ -225,6 +245,14 @@ export default function TraceCodesPage() {
           onOpenChange={setFormOpen}
           gardenId={gardenId}
           onSuccess={() => { setFormOpen(false); refetch(); }}
+        />
+      )}
+
+      {selectedQrItem && (
+        <TraceQrDialog
+          traceItem={selectedQrItem}
+          open={!!selectedQrItem}
+          onOpenChange={(open) => !open && setSelectedQrItem(null)}
         />
       )}
     </div>
